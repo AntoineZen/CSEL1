@@ -10,8 +10,12 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   
+   env_setup
+   kernel_module
 
-
+.. include:: env_setup.rst
+.. include:: kernel_module.rst
 
 Indices and tables
 ==================
