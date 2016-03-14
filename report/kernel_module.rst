@@ -1,8 +1,65 @@
 Kernel Modules
 ==============
 
+
+Kernel module basics
+--------------------
+
+
 1) Generation of a "out of tree" kernel module for the ODROID-XU3
------------------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We can make a simple module::
+
+    #include <linux/module.h>
+    #include <linux/init.h>
+    #include <linux/kernel.h>
+    
+    
+    static int __init skeleton_init(void  )
+    {
+        pr_info("Linux module skeleton loaded\n");
+        return 0;
+    }
+    
+    static void __exit skeleton_exit(void  )
+    {
+        pr_info("Linux module skeletonunloaded\n");
+    }
+    
+    module_init(skeleton_init);
+    module_exit(skeleton_exit);
+    
+    MODULE_AUTHOR("Antoine Zen-Ruffinen <antoine.zen@gmail.com>");
+    MODULE_DESCRIPTION("Module skeleton");
+    MODULE_LICENSE("GPL");
+    
+And the appropriate Makefile::
+    
+    ifneq ($(KERNELRELEASE),)
+    # This define by some magic the module name
+    obj-m  +=  mymodule.o
+    # This define the object needed the make the module. The .C file names will be extrapolated from that.
+    mymodule-objs:= skeleton.o
+    
+    else
+    
+    # Variable needed for the cross-compilation
+    CPU := arm
+    KDIR := ~/workspace/xu3/buildroot/output/build/linux-4.3.3/
+    TOOLS := ~/workspace/xu3/buildroot/output/host/usr/bin/arm-linux-gnueabihf-
+    
+    # Source path
+    PWD := $(shell pwd)
+    
+    all:
+    	$(MAKE) -C $(KDIR) M=$(PWD) ARCH=$(CPU) CROSS_COMPILE=$(TOOLS) modules
+    	       
+    clean:
+    	$(MAKE) -C $(KDIR) M=$(PWD) clean
+    	
+    endif
+
 
 We can compile the kernel module with a simple `make` command::
 
@@ -64,7 +121,16 @@ We can then remove the module from the kernel::
     [ 3499.366676] Linux module skeletonunloaded
     
     
-To make the module available for the `modprobe` command, we need to add a `install` target to the makefile and then we can install it to the filesystem::
+To make the module available for the `modprobe` command, we need to add a `install` target to the makefile (above the `clean` target)::
+
+    MODPATH := /tftpboot/odroidxu3
+   
+    	
+    install:
+    	$(MAKE) -C $(KDIR) M=$(PWD) INSTALL_MOD_PATH=$(MODPATH) modules_install
+
+
+And then we can install it to the filesystem::
 
     antoine@antoine-vb-64:~/master/CSEL1/02_kernel_modules$ sudo make install
     make -C ~/workspace/xu3/buildroot/output/build/linux-4.3.3/ M=/home/antoine/master/CSEL1/02_kernel_modules INSTALL_MOD_PATH=/tftpboot/odroidxu3 modules_install
@@ -86,13 +152,94 @@ Then we can try the `modprob`command on the target::
     ipv6                  406996 26 [permanent]
     # 
 
+2) Add some parameter the module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
+We can add some parameter to the module::
 
+    ...
+    static char* text = "Some blabla";
+    module_param(text, charp, 0);
+    
+    static int some_val = 0;
+    module_param(some_val, int, 0);
+    
+    static int __init skeleton_init(void  )
+    {
+        pr_info("Linux module skeleton loaded\n");
+        pr_info("mymodule: some_val=%d, text=%s\n", some_val, text);
+        return 0;
+    }
+    ...
+    
+We can then try it on the Odroid::
 
-
+    # insmod mymodule.ko 
+    # dmesg
+    ...
+    [ 5776.321720] Linux module skeleton loaded
+    [ 5681.759363] mymodule: some_val=0, text=Some blabla
+    
+    # rmmod mymodule.ko 
+    # insmod mymodule.ko some_val=56 text="Hello kernel"
+    # dmesg
+    ....
+    [ 5776.321720] Linux module skeleton loaded
+    [ 5776.324895] mymodule: some_val=56, text=Hello
+    
     
 
+
+
+
+
+
+Memory Management, libraries and utility functions
+--------------------------------------------------
+
+TBD Yann
+
+Input/Output access
+-------------------
+ 
+ 
+We can then test the module::
+
+    # insmod iotest.ko 
+    # dmesg
+    ...
+    [ 7578.946034] Module iotest loaded
+    [ 7578.947962] Product=939042, package=0, major=0, minor=1
+    # cat /proc/iomem 
+    ...
+    10000000-100000ff : iotest
+    ...
+
+    # rmmod iotest.ko 
+    # 
+    
+    
+So we have read the product id =  939042, package id is 0 and version is 0.1. We can see that the region was reserved for the `iotest` module.
+ 
+    
+
+Kernel Threads
+--------------
+
+TBD Yann
+
+
+Sleep
+-----
+
+TBD Antoine
+
+
+Interrupts
+----------
+
+TBD Yann
 
 
 
