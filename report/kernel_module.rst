@@ -204,7 +204,7 @@ Input/Output access
 -------------------
  
  
-We can then test the module::
+We can then test the module by installing it::
 
     # insmod iotest.ko 
     # dmesg
@@ -215,12 +215,11 @@ We can then test the module::
     ...
     10000000-100000ff : iotest
     ...
-
     # rmmod iotest.ko 
     # 
     
     
-So we have read the product id =  939042, package id is 0 and version is 0.1. We can see that the region was reserved for the `iotest` module.
+So we have read the product id =  939042, package id is 0 and version is 0.1. We can see that the region was reserved for the `iotest` module by reading `/proc/iomem`.
  
     
 
@@ -233,7 +232,30 @@ TBD Yann
 Sleep
 -----
 
-TBD Antoine
+In this task, we have two threads. The first one is waiting for an event of the second. The second just send the event every five seconds. For this, we use an event queue. Note that the waiting of an event works together with a C condition. So the producer of the event need to set some condition to **true** before to wake-up the threads waiting for the event/condition. The consumer thread will turn this condition to **false**. In our example the C condition will be as simple boolean global variable (*wakeup* in the code).
+
+Here is the output of the module test::
+
+    # insmod sleep.ko
+    # sleep 30
+    # dmesg
+    ....
+    [  133.689821] Thread one started
+    [  133.690097] Linux module sleep loaded
+    [  133.690153] Thread two started
+    [  133.690159] Thread two: Sending event
+    [  133.701950] Thread one: Got event
+    [  138.691556] Thread two: Sending event
+    [  138.693856] Thread one: Got event
+    [  143.696559] Thread two: Sending event
+    [  143.698843] Thread one: Got event
+    [  148.701548] Thread two: Sending event
+    [  148.703829] Thread one: Got event
+    [  153.706556] Thread two: Sending event
+    [  153.708839] Thread one: Got event
+    # rmmod sleep.ko 
+    # 
+
 
 
 Interrupts
