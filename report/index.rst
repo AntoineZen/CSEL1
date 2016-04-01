@@ -13,9 +13,11 @@ Contents:
    
    env_setup
    kernel_module
+   drivers
 
 .. include:: env_setup.rst
 .. include:: kernel_module.rst
+.. include:: drivers.rst
 
 Indices and tables
 ==================

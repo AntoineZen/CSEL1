@@ -70,7 +70,7 @@ int thread_two(void* data)
 
 
 
-static int __init skeleton_init(void  )
+static int __init sleep_init(void  )
 {
 	// Create the wait queue
 	init_waitqueue_head(&event_queue);   
@@ -87,7 +87,7 @@ static int __init skeleton_init(void  )
 }
 
 
-static void __exit skeleton_exit(void  )
+static void __exit sleep_exit(void  )
 {
 	// Stop thread one
 	if( thread_one_handle != NULL )
@@ -105,8 +105,8 @@ static void __exit skeleton_exit(void  )
 }
 
 
-module_init(skeleton_init);
-module_exit(skeleton_exit);
+module_init(sleep_init);
+module_exit(sleep_exit);
 
 MODULE_AUTHOR("Antoine Zen-Ruffinen <antoine.zen@gmail.com>");
 MODULE_DESCRIPTION("Sleep test Module");
