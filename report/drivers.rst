@@ -140,8 +140,15 @@ TBD Yann
 Blocking operations
 -------------------
 
-TBD Antoine
+For the blocking opeation, the kernel module should implement the ``poll()`` callback function. In this mode, the ``pool()`` function should block on some wait-queue. The wait queue should then be woken by some event like an IRQ. The above examle uses an IRQ from a GPIO to control the pooling:
 
+.. literalinclude:: ../03_drivers/06/drv/button.c
+   :language: c
+
+Then the user-land application can use ``select()`` to wait on this event. The ``select()`` syscall will relay on the ``.poll`` call-back function of the caracter driver pointed by the passed file descriptor. The following code does this to count the events:
+
+.. literalinclude:: ../03_drivers/06/app/main.c
+   :language: c
 
 Sysfs
 -----
