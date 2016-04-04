@@ -19,7 +19,7 @@ int main ()
 	int button_fd;
 	// create & init file descriptor set for the select() function
 	fd_set active_fds, rfds;
-	FD_ZERO(&rfds);
+	FD_ZERO(&rfds); 
 	
 	// Setup a five second time-out, maybe for debug
 	/*
@@ -58,9 +58,8 @@ int main ()
 	}
 	else
 	{
-		printf("Error oppening '/dev/mmaptest'\n");
+		printf("Error opening '/dev/button'\n");
 	}
-	
 
 	return 0;
 }
