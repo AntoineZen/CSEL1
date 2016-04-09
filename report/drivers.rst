@@ -150,6 +150,64 @@ Then the user-land application can use ``select()`` to wait on this event. The `
 .. literalinclude:: ../03_drivers/06/app/main.c
    :language: c
 
+We can install the driver::
+
+    # insmod button.ko   
+    # dmesg
+    .....
+    [  456.158645] Module button loaded
+    # cat /proc/devices 
+    Character devices:
+      1 mem
+      2 pty
+    ...
+    248 button
+    ...
+    # mknod /dev/button c 248 0
+
+
+And test the application::
+
+    # ./button_test &
+    # dmesg
+    ...
+    [  673.581700] Before pool_wait()
+    [  673.583421] after pool_wait()
+    # fg
+    ./button_test
+    Counter is now 1.
+    Counter is now 2.
+    Counter is now 3.
+    Counter is now 4.
+    Counter is now 5.
+    Counter is now 6.
+    Counter is now 7.
+    Counter is now 8.
+    Counter is now 9.
+    ...
+    ^C
+    
+We can see that the counter is incremented every time we press on the button. The kernel logs gives some detail on what appends::
+
+    # dmesg
+    [  727.092662] pool_wait() return true
+    [  727.096203] Before pool_wait()
+    [  727.098918] after pool_wait()
+    [  727.210328] button_irq()
+    [  727.211629] Before pool_wait()
+    [  727.214424] after pool_wait()
+    [  727.217613] pool_wait() return true
+    [  727.221161] Before pool_wait()
+    [  727.223873] after pool_wait()
+    [  727.312790] button_irq()
+    [  727.314086] Before pool_wait()
+    [  727.316933] after pool_wait()
+    [  727.319828] pool_wait() return true
+    [  727.323883] Before pool_wait()
+    [  727.326381] after pool_wait()
+    [  767.894888] Before pool_wait()
+    [  767.896515] after pool_wait()
+
 Sysfs
 -----
 
