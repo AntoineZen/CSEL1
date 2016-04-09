@@ -24,12 +24,16 @@
  */
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/timerfd.h>
+#include <sys/select.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <syslog.h>
 
 /*
  * pwm0 - gpb2.0 - 203
@@ -38,6 +42,14 @@
 #define GPIO_UNEXPORT	"/sys/class/gpio/unexport"
 #define GPIO_PWM	"/sys/class/gpio/gpio203"
 #define PWM		"203"
+#define SW_PREFIX	"/sys/class/gpio/gpio"
+#define SW1     "29"
+#define SW2     "30"
+#define SW3     "22"
+
+#define PWM_NS_MULT 10000
+#define MAX(x, y) ((x>y)?x:y)
+#define SET_TIM(x, y) x.it_interval.tv_sec=1; x.it_interval.tv_nsec=y;x.it_value.tv_sec=1; x.it_value.tv_nsec=y;
 
 static int open_pwm()
 {
@@ -61,41 +73,164 @@ static int open_pwm()
 	return f;
 }
 
-int main(int argc, char* argv[]) 
+static int open_switch(char* pin)
 {
+	char buffer[32];
+		// unexport pin out of sysfs (reinitialization)
+	int f = open (GPIO_UNEXPORT, O_WRONLY);
+	if(f < 0)
+	{
+		perror("unexport");
+		exit(-1);
+	}
+	write (f, pin, strlen(pin));
+	close (f);
+
+	// export pin to sysfs
+	f = open (GPIO_EXPORT, O_WRONLY);
+	if(f < 0)
+	{
+		perror("export");
+		exit(-1);
+	}
+	write (f, pin, strlen(pin));
+	close (f);	
+
+	// config pin as output
+	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/direction");
+	//printf("writing to %s\n", buffer);
+	f = open (buffer, O_WRONLY);
+	if(f < 0)
+	{
+		perror("Setting pin as output");
+		exit(-1);
+	}
+	write (f, "in", strlen("in"));
+	close (f);
+
+	// Config pin for rising edge event
+	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/edge");
+	//printf("writing to %s\n", buffer);
+	f = open (buffer, O_WRONLY);
+	write (f, "rising", strlen("rising"));
+	if(f < 0)
+	{
+		perror("event");
+		exit(-1);
+	}
+	close (f);
+
+	// open gpio value attribute
+	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/value");
+	//printf("Opening %s\n", buffer);
+	if(f < 0)
+	{
+		perror("Open for reading");
+		exit(-1);
+	}
+ 	f = open (buffer, O_RDWR);
+	return f;
+}
+
+int main() 
+{
+	char dummy[64];
+
+	// Open the syslog
+	openlog("PWM control", LOG_PERROR, LOG_USER);
+	int sw1_fd = open_switch(SW1);
+	int sw2_fd = open_switch(SW2);
+	int sw3_fd = open_switch(SW3);
+
 	long duty = 50;
-	if (argc >= 2)   duty   = atoi (argv[1]);
 
-	// frequency = 1 kHz
-	// compute duty period...
-	long p1 = 5000000 / 100 * duty;
-	long p2 = 5000000 - p1;
+	// Set the driver
 
+	// Open PWM output
  	int pwm = open_pwm();
 	write (pwm, "1", sizeof("1"));
 
-	struct timespec t1;
-	clock_gettime (CLOCK_MONOTONIC, &t1);
+
+	// Create the timer
+	int tim_fd = timerfd_create(CLOCK_REALTIME, 0);
+	struct itimerspec hi, low;
+	SET_TIM(hi, duty * PWM_NS_MULT);
+	SET_TIM(low, (100-duty) * PWM_NS_MULT);
+	timerfd_settime(tim_fd, 0, &hi, NULL);
+
+	int max_fd = MAX(sw1_fd, sw2_fd);
+	max_fd = MAX(max_fd, sw3_fd);
+	max_fd = MAX(max_fd, tim_fd);
+
 
 	int k = 0;
 	while(1) {
-		struct timespec t2;
-		clock_gettime (CLOCK_MONOTONIC, &t2);
+		fd_set fd_int;
+		FD_ZERO(&fd_int);
+		FD_SET(tim_fd, &fd_int);
+		//FD_SET(sw1_fd, &fd_int);
+		//FD_SET(sw2_fd, &fd_int);
+		//FD_SET(sw3_fd, &fd_int);
 
-		long delta = (t2.tv_sec  - t1.tv_sec) * 1000000000 +
-			     (t2.tv_nsec - t1.tv_nsec);
-
-		int toggle = ((k == 0) && (delta >= p1))
-			   | ((k == 1) && (delta >= p2));
-		if (toggle) {
-			t1 = t2;
-			k = (k+1)%2;
-			if (k == 0) 
-				write (pwm, "1", sizeof("1"));
-			else
-				write (pwm, "0", sizeof("0"));
+		// Look if some intput has a change or if the timer overflows
+		int ret = select(max_fd+1, &fd_int, NULL, NULL, NULL);
+		// Manage errors
+		if (ret == -1)
+		{
+			perror("Selec()");
+			exit(-1);
 		}
+		else if (ret == 0)
+		{
+			perror("Timeout should not occure!");
+			exit(-1);
+		}
+		// Normal case
+		else
+		{
+			// Handle timer
+			if (FD_ISSET(tim_fd, &fd_int))
+			{
+				read(tim_fd, dummy, 10);
+				printf("Timer!\n");
+			}
+			// Manage siwches
+			else if (FD_ISSET(sw1_fd, &fd_int))
+			{
+				read(sw1_fd, dummy, 10);
+				lseek(sw1_fd, 0, SEEK_SET);
+				printf("SW1\n");
+				if (duty < 100)
+					duty += 10;
+			}
+			else if (FD_ISSET(sw2_fd, &fd_int))
+			{
+				read(sw2_fd, dummy, 10);
+				lseek(sw2_fd, 0, SEEK_SET);
+				printf("SW2\n");
+				duty = 50;
+			}
+			else if (FD_ISSET(sw3_fd, &fd_int))
+			{
+				read(sw3_fd, dummy, 10);
+				lseek(sw3_fd, 0, SEEK_SET);
+				printf("SW3\n");
+				if (duty > 0)
+					duty -= 10;
+			}
+
+		}
+
+
 	}
+
+	close(tim_fd);
+	close(pwm);
+	close(sw3_fd);
+	close(sw2_fd);
+	close(sw1_fd);
+
+	closelog();
 
 	return 0;
 }

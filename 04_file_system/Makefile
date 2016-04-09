@@ -31,6 +31,8 @@ clean:
 clean_all: 
 	rm -Rf .obj $(EXE)_a $(EXE)_h $(EXE)_a_s $(EXE)_h_s *~
 
+deploy: $(EXEC)
+	cp $(EXEC) ~/workspace
 
 .PHONY: all clean clean_all
 
