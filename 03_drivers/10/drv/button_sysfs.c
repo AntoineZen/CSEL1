@@ -18,11 +18,98 @@ static dev_t button_dev;
 // Character device structure
 static struct cdev button_cdev;
 
+
+#define BUFFER_SIZE 200
+
+char text[BUFFER_SIZE];
+
+//storage structure accessed by sysfs
+struct struct_voiture{
+    char marque[100];
+    char modele[100];
+    int vitesse_max;
+};
+
+static struct struct_voiture voiture = {
+    .marque="Subaru\n",
+    .modele="Impreza\n",
+    .vitesse_max = 300
+};
+
+// sysfs
+static void sysfs_dev_release(struct device * dev) {}
+
+static struct platform_driver sysfs_driver= {
+    .driver = {.name = "button",},
+};
+
+static struct platform_device sysfs_device = {
+    .name= "button",
+    .id = -1,
+    .dev.release = sysfs_dev_release
+};
+
+
+static ssize_t button_show_marque(struct device* dev, struct device_attribute * attr, char * buf)
+{
+    strcpy(buf, voiture.marque);
+    return strlen(voiture.marque);
+}
+
+static ssize_t button_store_marque(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+{
+    int len = sizeof(voiture.marque) - 1;
+    if (len > count)
+        len = count;
+    strncpy(voiture.marque, buf, len);
+    voiture.marque[len] = 0;
+    return len;
+}
+
+static ssize_t button_show_modele(struct device* dev, struct device_attribute * attr, char * buf)
+{
+    //modele must be converted to cstring
+    strcpy(buf, voiture.modele);
+    return strlen(voiture.modele);
+}
+
+static ssize_t button_store_modele(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+{
+    int len = sizeof(voiture.modele) - 1;
+    if (len > count)
+        len = count;
+    strncpy(voiture.modele, buf, len);
+    voiture.modele[len] = 0;
+    return len;
+}
+
+static ssize_t button_show_vitesse(struct device* dev, struct device_attribute * attr, char * buf)
+{
+    return sprintf(buf, "%u\n",voiture.vitesse_max);
+}
+
+static ssize_t button_store_vitesse(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+{
+    //buf must be converted to int
+    long vitesse;
+    if(!kstrtol (buf, 10, &vitesse))
+        voiture.vitesse_max = (int)vitesse;
+    return strlen(buf);
+}
+
+//declare devices attributes structures
+DEVICE_ATTR(marque, 0660, button_show_marque, button_store_marque);
+DEVICE_ATTR(modele, 0660, button_show_modele, button_store_modele);
+DEVICE_ATTR(vitesse, 0660, button_show_vitesse, button_store_vitesse);
+
+
 // Wait queue for the Button IRQ
 DECLARE_WAIT_QUEUE_HEAD(button_event_queue);
 bool toggled = false;
 
 int button_value =0;
+
+
 
 static int button_open(struct inode* i, struct file* f)
 {
@@ -69,7 +156,7 @@ static ssize_t button_read(struct file* f, char* data, size_t size, loff_t* offs
     if(copy_to_user(data, val, 2) != 0) 
     {
         return -EFAULT;
-    }		
+    }       
     return 2;
 }
 
@@ -143,6 +230,18 @@ static int __init button_init(void  )
         pr_err("Failed to map button IRQ");
     }
 
+        //sysfs register driver+device and add devices attributes
+    if (status == 0)
+        status = platform_driver_register(&sysfs_driver);
+    if (status == 0)
+        status = platform_device_register(&sysfs_device);
+    if (status == 0)
+    {
+        device_create_file(&sysfs_device.dev, &dev_attr_marque);
+        device_create_file(&sysfs_device.dev, &dev_attr_modele);
+        device_create_file(&sysfs_device.dev, &dev_attr_vitesse);
+    }
+
     // Print that module is being loaded
     pr_info("Module button loaded\n");
     
@@ -152,6 +251,13 @@ static int __init button_init(void  )
 
 static void __exit button_exit(void  )
 {
+    //sysfs remove devices attributes and unregister device+driver
+    device_remove_file(&sysfs_device.dev, & dev_attr_marque);
+    device_remove_file(&sysfs_device.dev, & dev_attr_modele);
+    device_create_file(&sysfs_device.dev, &dev_attr_vitesse);
+    platform_device_unregister(&sysfs_device);
+    platform_driver_unregister(&sysfs_driver);
+
     // Free the IRQ
     free_irq(gpio_to_irq(BUTTON_IO_NR), NULL);
     // Free the GPIO

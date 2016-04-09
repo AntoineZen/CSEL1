@@ -50,8 +50,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'CSEL1'
-copyright = '2016, Antoine Zen-Ruffinen'
-author = 'Antoine Zen-Ruffinen'
+copyright = '2016, Antoine Zen-Ruffinen, Yann Maret'
+author = 'Antoine Zen-Ruffinen, Yann Maret'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -225,8 +225,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'CSEL1.tex', 'CSEL1 Documentation',
-   'Antoine Zen-Ruffinen', 'manual'),
+  (master_doc, 'CSEL1.tex', 'CSEL1 Laboratory report',
+   'Antoine Zen-Ruffinen, Yann Maret', 'report'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

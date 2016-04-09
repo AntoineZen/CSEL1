@@ -2,7 +2,9 @@ Environement setup
 ==================
 
 
-We need to configure the U-Boot bootloader to download the kernel & root-fs via NFS. This is done by checking the Ethernet connection works and then setup the kernel argument by setting some U-Boot environment variables::
+We need to configure the U-Boot bootloader to download the kernel & root-fs via NFS. This is done by checking the Ethernet connection works and then setup the kernel argument by setting some U-Boot environment variables:
+
+.. code-block:: console
 
     ODROID-XU3 #
     ODROID-XU3 # usb start
@@ -42,6 +44,8 @@ We need to configure the U-Boot bootloader to download the kernel & root-fs via 
     ODROID-XU3 # 
     
     
-We can then start the kernel::
+We can then start the kernel:
+
+.. code-block:: console
 
     ODROID-XU3 # run nfsboot

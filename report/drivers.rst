@@ -14,7 +14,9 @@ The following  program is able to read directly some register from the user spac
    :language: c
    
    
-If we run the program on the Odroid, we get the following output::
+If we run the program on the Odroid, we get the following output:
+
+.. code-block:: console
 
     # cd /usr/workspace/
     # ls
@@ -42,7 +44,9 @@ The following code implement this kernel driver:
    :language: c
    
    
-The driver can then be compiled as usual and installed on the odroid::
+The driver can then be compiled as usual and installed on the odroid:
+
+.. code-block:: console
 
     # insmod mmaptestmod.ko 
     # dmesg
@@ -51,7 +55,9 @@ The driver can then be compiled as usual and installed on the odroid::
     #
     
     
-We can read the ``/proc/devices`` file to know which major number was alocated to our driver::
+We can read the ``/proc/devices`` file to know which major number was alocated to our driver:
+
+.. code-block:: console
 
     # cat /proc/devices 
     Character devices:
@@ -109,18 +115,24 @@ We can read the ``/proc/devices`` file to know which major number was alocated t
     # 
 
 
-So we can see here that the **major number** allocated to our driver is **248**. We can then create the node file::
+So we can see here that the **major number** allocated to our driver is **248**. We can then create the node file:
+
+.. code-block:: console
 
     # mknod /dev/mmaptest c 248 0
     # 
    
 
-Once this is done we can test our user space driver that uses the new kernel driver::
+Once this is done we can test our user space driver that uses the new kernel driver:
+
+.. code-block:: console
 
     # ./mmap_test_driver 
     Product=939042, package=0, major=0, minor=1
 
-We can see in the kernel logs that the ``mmaptest_mmap()`` handler was called::
+We can see in the kernel logs that the ``mmaptest_mmap()`` handler was called:
+
+.. code-block:: console
 
     # dmesg
     ....
@@ -135,7 +147,94 @@ This user space driver (application) is the same as in part 1, but uses ``/dev/m
 Charater Oriented Drivers
 -------------------------
 
-TBD Yann
+The following code is the implementation of a character device. This driver is able to read and write data from the user land. We can use echo and cat command to interact with this module respectively write and read.
+
+
+.. literalinclude:: ../03_drivers/03/skeleton.c
+   :language: c
+
+The device character created using the module code is listed below. A lot of other characters can be show in “/proc/devices”:
+
+.. code-block:: console
+
+    # cat /proc/devices
+    Character devices:
+    ...
+    136 pts
+    180 usb
+    189 usb_device
+    204 ttySAC
+    226 drm
+    248 skeleton
+    ...
+
+Now create an access file:
+
+.. code-block:: console
+    
+    # mknod /dev/mymodule c 248 0
+
+Test using “echo” and “cat” command on the module node:
+
+.. code-block:: console
+
+    # echo hello > /dev/mymodule
+    # cat /dev/mymodule
+    hello
+
+
+The previous module code will be updated for more instance compatibility. With a number given at loading time that’s represent the number of instance. Each instance will create a variable that store a value between user land and kernel land:
+
+.. literalinclude:: ../03_drivers/04/skeleton.c
+   :language: c
+
+Create load kernel with the number of node that we will use. And create access file using mknod function provided by linux kernel:
+
+.. code-block:: console
+    
+    # insmod mymodule.ko count=3
+    
+    # cat /proc/devices
+    Character devices:
+    ...
+    248 skeleton
+    ...
+    
+    # mknod /dev/mymodule1 c 248 0
+    # mknod /dev/mymodule2 c 248 1
+    # mknod /dev/mymodule3 c 248 2
+
+Test using the previous created node:
+
+.. code-block:: console
+
+    # echo “hello 1” > /dev/mymodule1
+    # echo “hello 2” > /dev/mymodule2
+    # echo “hello 3” > /dev/mymodule3
+    
+    # cat /dev/mymodule1
+    hello 1
+    # cat /dev/mymodule2
+    hello 2
+    # cat /dev/mymodule3
+    hello 3
+
+ 
+
+The following code runs in the user space and read and write data from and to mymodule. The following code take one argument pass to the program and write it to the character device driver previously opened, and read back the data.
+
+
+.. literalinclude:: ../03_drivers/05/main.c
+   :language: c
+
+The result of the program is showed below:
+
+.. code-block:: console
+
+    # ./test “Hello”
+    Write: Hello
+    Read: Hello
+    
 
 Blocking operations
 -------------------
@@ -150,7 +249,9 @@ Then the user-land application can use ``select()`` to wait on this event. The `
 .. literalinclude:: ../03_drivers/06/app/main.c
    :language: c
 
-We can install the driver::
+We can install the driver:
+
+.. code-block:: console
 
     # insmod button.ko   
     # dmesg
@@ -166,7 +267,9 @@ We can install the driver::
     # mknod /dev/button c 248 0
 
 
-And test the application::
+And test the application:
+
+.. code-block:: console
 
     # ./button_test &
     # dmesg
@@ -187,7 +290,9 @@ And test the application::
     ...
     ^C
     
-We can see that the counter is incremented every time we press on the button. The kernel logs gives some detail on what appends::
+We can see that the counter is incremented every time we press on the button. The kernel logs gives some detail on what appends:
+
+.. code-block:: console
 
     # dmesg
     [  727.092662] pool_wait() return true
@@ -211,10 +316,139 @@ We can see that the counter is incremented every time we press on the button. Th
 Sysfs
 -----
 
-TBD Yann
+This code implements a character driver on a sysfs. 3 members can be access “marque”, “model” and “vitesse”. Only “echo” and “cat” are used for the purpose.
 
+
+.. literalinclude:: ../03_drivers/07/skeleton.c
+   :language: c
+
+
+Search of the skeleton module, the module isn’t mounted yet:
+
+.. code-block:: console
+
+    # ls /sys/bus/devices/platform/
+    ...
+    hello 3
+    alarmtimer
+    amba
+    arm-pmu
+    exynos-cpufreq
+    exynos-drm
+    gpioleds
+    power
+    pwmleds
+    pwrseq
+    reg-dummy
+    serial8250
+    sound
+    uevent
+    ...
+
+
+After a module load, the peripheric is now visible:
+
+.. code-block:: console
+ 
+    # ls /sys/bus/devices/platform/
+    ...
+    hello 3
+    alarmtimer
+    amba
+    arm-pmu
+    exynos-cpufreq
+    exynos-drm
+    gpioleds
+    power
+    pwmleds
+    pwrseq
+    reg-dummy
+    serial8250
+    skeleton
+    sound
+    uevent
+    ...
+
+Inside the module skeleton, we find “marque”, “model” and “vitesse”:
+
+.. code-block:: console
+
+    # ls /sys/bus/devices/platform/skeleton/
+    driver	modalias	power		uevent
+    marque	modele	subsystem	vitesse
+
+ 
+Using all 3 attributes with echo and cat, let’s try:
+
+.. code-block:: console
+ 
+    # cd /sys/bus/devices/platform/skeleton/
+    # cat marque
+    Subaru
+    # cat modele
+    Impreza
+    # cat vitesse
+    # 300
+    # echo Ferrari > marque
+    # echo California > modele
+    # echo 330 > marque
+    # cat marque
+    Ferrari
+    # cat modele
+    California
+    # cat vitesse
+    # 330
 
 Device Manager
 --------------
 
-TBD Antoine
+In this part we will use ``mdev`` to create the node file for us. The kernel module for this will take the example of *Blocking device* part but adding the *Sysfs* part to make ``mdev`` able to detect it. The user space application will be the same than for the *Blocking device* part. The code of the merged kernel module is given hereafter:
+
+.. literalinclude:: ../03_drivers/10/drv/button_sysfs.c
+   :language: c
+
+
+We can test the installation of the kernel driver:
+
+.. code-block:: console
+
+    # insmod button_sysfs.ko 
+    # dmesg
+    ...
+    [ 5178.208953] Module button loaded
+    
+    # ls /sys/devices/platform/skeleton/
+    driver           modalias         subsystem
+    driver_override  modele           uevent
+    marque           power            vitesse
+    
+    # cat /proc/devices 
+    Character devices:
+    ...
+    248 button
+    ...
+    # ls /sys/devices/platform/button/
+    driver           modalias         subsystem
+    driver_override  modele           uevent
+    marque           power            vitesse
+
+The ``mdev`` utility will detect the folder in ``/sys/devices/platform`` and create the node file ``/dev/button`` using the following rule::
+
+    button          root:root 666
+
+The rule should be added to ``/etc/mdev.conf``. Then if we run ``mdev -s`` the node file will be created:
+
+.. code-block:: console
+
+    # mdev -s
+    # ls /dev/button
+    button
+    
+    
+
+
+
+
+
+
+
