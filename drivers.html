@@ -1,0 +1,1689 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Drivers &mdash; CSEL1 0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="CSEL1 0.0 documentation" href="index.html"/>
+        <link rel="next" title="File Systems" href="file_system.html"/>
+        <link rel="prev" title="Kernel Modules" href="kernel_module.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CSEL1
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="env_setup.html">Environement setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kernel_module.html">Kernel Modules</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Drivers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#memory-oriented-drivers">Memory Oriented Drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#direct-memory-read">1) Direct memory read</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mmap-with-custom-driver">2) mmap with custom driver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#charater-oriented-drivers">Charater Oriented Drivers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#blocking-operations">Blocking operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sysfs">Sysfs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#device-manager">Device Manager</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File Systems</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">CSEL1</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Drivers</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/drivers.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="drivers">
+<h1>Drivers<a class="headerlink" href="#drivers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="memory-oriented-drivers">
+<h2>Memory Oriented Drivers<a class="headerlink" href="#memory-oriented-drivers" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="direct-memory-read">
+<h3>1) Direct memory read<a class="headerlink" href="#direct-memory-read" title="Permalink to this headline">¶</a></h3>
+<p>The following  program is able to read directly some register from the user space using the <code class="docutils literal"><span class="pre">/dev/mem</span></code> driver:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdint.h&gt;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#include &lt;sys/types.h&gt;</span>
+<span class="cp">#include &lt;sys/stat.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+       
+<span class="c1">// Include for the mmap() function</span>
+<span class="cp">#include &lt;sys/mman.h&gt;</span>
+
+<span class="kt">int</span> <span class="nf">main</span> <span class="p">()</span>
+<span class="p">{</span>
+    <span class="c1">// File descriptor for the /dev/mem file</span>
+    <span class="kt">int</span> <span class="n">mem_fd</span><span class="p">;</span>
+    
+    <span class="c1">// Pointer to the ID register (will be set by mmap())</span>
+    <span class="kt">uint32_t</span><span class="o">*</span> <span class="n">id</span><span class="p">;</span>
+    
+    <span class="c1">// Fileds of the ID 	</span>
+    <span class="kt">int</span> <span class="n">product_id</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">package_id</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">major_v</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">minor_v</span><span class="p">;</span>
+    
+    <span class="c1">// Open the memory device</span>
+    <span class="n">mem_fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/dev/mem&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">mem_fd</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// Map the ID register to our virtual address space</span>
+        <span class="n">id</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mh">0x100</span><span class="p">,</span>  <span class="n">PROT_READ</span><span class="p">,</span> <span class="n">MAP_PRIVATE</span><span class="p">,</span> <span class="n">mem_fd</span><span class="p">,</span> <span class="mh">0x10000000</span><span class="p">);</span>
+    
+        <span class="c1">// Extract the various bit-fields</span>
+        <span class="n">minor_v</span> 	<span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0x0000000F</span><span class="p">);</span>
+        <span class="n">major_v</span> 	<span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0x000000F0</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">;</span>
+        <span class="n">package_id</span> 	<span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0x00000F00</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">;</span>
+        <span class="n">product_id</span>  <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0xFFFFF000</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">;</span>
+        
+        <span class="c1">// Print the informations readen</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">product_id</span><span class="p">,</span> <span class="n">package_id</span><span class="p">,</span> <span class="n">major_v</span><span class="p">,</span> <span class="n">minor_v</span><span class="p">);</span>
+    
+        <span class="c1">// Unmap the ID register</span>
+        <span class="n">munmap</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="mh">0x100</span><span class="p">);</span>
+        <span class="c1">// Close /dev/mem</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">mem_fd</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error oppening &#39;/dev/mem&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>If we run the program on the Odroid, we get the following output:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> <span class="nb">cd</span> /usr/workspace/
+<span class="gp">#</span> ls
+<span class="go">RemoteSystemsTempFiles  mmap_test               sleep.ko</span>
+<span class="go">iotest.ko               mymodule.ko             xu3</span>
+<span class="gp">#</span> ./mmap_test
+<span class="go">Product=939042, package=0, major=0, minor=1</span>
+<span class="gp">#</span>
+</pre></div>
+</div>
+<p>This is the same output we had from the kernel module doing the same job. This means the user space drivers works.</p>
+</div>
+<div class="section" id="mmap-with-custom-driver">
+<h3>2) mmap with custom driver<a class="headerlink" href="#mmap-with-custom-driver" title="Permalink to this headline">¶</a></h3>
+<p>To have a driver (in kernel space) that implement the call-back for the mmap() function, the kernel module should register like a character device driver. For this the following operation are required in the module initialization callback:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Allocate a driver major number, using the <code class="docutils literal"><span class="pre">alloc_chredev_region()</span></code> function.</li>
+<li>register the <code class="docutils literal"><span class="pre">file_operation</span></code> structure where the <code class="docutils literal"><span class="pre">mmap</span></code> pointer should be pointing to the mmap callback function, usint <code class="docutils literal"><span class="pre">cdev_init()</span></code> and <code class="docutils literal"><span class="pre">cdev_add()</span></code> functions.</li>
+<li>register the driver minior number using the <code class="docutils literal"><span class="pre">cdev_add()</span></code> function (and get the minor number).</li>
+</ol>
+</div></blockquote>
+<p>The following code implement this kernel driver:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;linux/module.h&gt;</span>
+<span class="cp">#include &lt;linux/init.h&gt;</span>
+<span class="cp">#include &lt;linux/kernel.h&gt;</span>
+<span class="cp">#include &lt;linux/moduleparam.h&gt;</span>
+<span class="cp">#include &lt;linux/io.h&gt;</span>
+<span class="cp">#include &lt;linux/ioport.h&gt;</span>
+<span class="cp">#include &lt;linux/device.h&gt;</span>
+<span class="cp">#include &lt;linux/platform_device.h&gt;</span>
+<span class="cp">#include &lt;linux/cdev.h&gt;</span>
+<span class="cp">#include &lt;linux/fs.h&gt;</span>
+<span class="cp">#include &lt;linux/mm.h&gt;</span>
+
+
+<span class="cp">#define REG_ADDR 0x10000000</span>
+<span class="cp">#define REG_SIZE 0x100</span>
+
+<span class="k">static</span> <span class="kt">dev_t</span> <span class="n">mmaptest_dev</span><span class="p">;</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">cdev</span> <span class="n">mmaptest_cdev</span><span class="p">;</span>
+
+
+
+<span class="kt">int</span> <span class="nf">mmaptest_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span><span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="kt">int</span> <span class="nf">mmaptest_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span><span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="kt">int</span> <span class="nf">mmaptest_mmap</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">struct</span> <span class="n">vm_area_struct</span><span class="o">*</span> <span class="n">vma</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module mmaptest: mmap handler called.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">remap_pfn_range</span><span class="p">(</span><span class="n">vma</span><span class="p">,</span> <span class="n">vma</span><span class="o">-&gt;</span><span class="n">vm_start</span><span class="p">,</span> <span class="n">REG_ADDR</span> <span class="o">&gt;&gt;</span> <span class="n">PAGE_SHIFT</span><span class="p">,</span> <span class="n">REG_SIZE</span><span class="p">,</span>  <span class="n">vma</span><span class="o">-&gt;</span><span class="n">vm_page_prot</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="n">mmaptest_fops</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">open</span> <span class="o">=</span> <span class="n">mmaptest_open</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">mmap</span> <span class="o">=</span> <span class="n">mmaptest_mmap</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">mmaptest_release</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">mmaptest_init</span><span class="p">(</span><span class="kt">void</span>  <span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="c1">// 1) Register for a Major device number</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">alloc_chrdev_region</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mmaptest_dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;mmaptest&quot;</span><span class="p">);</span>
+    <span class="c1">// If it worked</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// 2) Register the strucutre of call-back function pointers</span>
+        <span class="n">cdev_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mmaptest_cdev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">mmaptest_fops</span><span class="p">);</span>
+        <span class="n">mmaptest_cdev</span><span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">;</span>
+        <span class="c1">// 3) Registter the caracter device</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">cdev_add</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mmaptest_cdev</span><span class="p">,</span> <span class="n">mmaptest_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Failed to alocate character device&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+
+    <span class="c1">// Print that module is being loaded</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module mmaptest loaded</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">mmaptest_exit</span><span class="p">(</span><span class="kt">void</span>  <span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">cdev_del</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mmaptest_cdev</span><span class="p">);</span>
+    <span class="n">unregister_chrdev_region</span><span class="p">(</span><span class="n">mmaptest_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    
+    <span class="c1">// Print that everthing is done</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module mmaptest removed</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">mmaptest_init</span><span class="p">);</span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">mmaptest_exit</span><span class="p">);</span>
+
+<span class="n">MODULE_AUTHOR</span><span class="p">(</span><span class="s">&quot;Antoine Zen-Ruffinen &lt;antoine.zen@gmail.com&gt;&quot;</span><span class="p">);</span>
+<span class="n">MODULE_DESCRIPTION</span><span class="p">(</span><span class="s">&quot;mmap test module&quot;</span><span class="p">);</span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The driver can then be compiled as usual and installed on the odroid:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> insmod mmaptestmod.ko
+<span class="gp">#</span> dmesg
+<span class="go">....</span>
+<span class="go">[  290.763743] Module mmaptest loaded</span>
+<span class="gp">#</span>
+</pre></div>
+</div>
+<p>We can read the <code class="docutils literal"><span class="pre">/proc/devices</span></code> file to know which major number was alocated to our driver:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> cat /proc/devices
+<span class="go">Character devices:</span>
+<span class="go">  1 mem</span>
+<span class="go">  2 pty</span>
+<span class="go">  3 ttyp</span>
+<span class="go">  4 /dev/vc/0</span>
+<span class="go">  4 tty</span>
+<span class="go">  4 ttyS</span>
+<span class="go">  5 /dev/tty</span>
+<span class="go">  5 /dev/console</span>
+<span class="go">  5 /dev/ptmx</span>
+<span class="go">  7 vcs</span>
+<span class="go"> 10 misc</span>
+<span class="go"> 13 input</span>
+<span class="go"> 21 sg</span>
+<span class="go"> 29 fb</span>
+<span class="go">128 ptm</span>
+<span class="go">136 pts</span>
+<span class="go">180 usb</span>
+<span class="go">189 usb_device</span>
+<span class="go">204 ttySAC</span>
+<span class="go">226 drm</span>
+<span class="go">248 mmaptest</span>
+<span class="go">249 cros_ec</span>
+<span class="go">250 bsg</span>
+<span class="go">251 watchdog</span>
+<span class="go">252 iio</span>
+<span class="go">253 rtc</span>
+<span class="go">254 tpm</span>
+
+<span class="go">Block devices:</span>
+<span class="go">  1 ramdisk</span>
+<span class="go">259 blkext</span>
+<span class="go">  7 loop</span>
+<span class="go">  8 sd</span>
+<span class="go"> 65 sd</span>
+<span class="go"> 66 sd</span>
+<span class="go"> 67 sd</span>
+<span class="go"> 68 sd</span>
+<span class="go"> 69 sd</span>
+<span class="go"> 70 sd</span>
+<span class="go"> 71 sd</span>
+<span class="go">128 sd</span>
+<span class="go">129 sd</span>
+<span class="go">130 sd</span>
+<span class="go">131 sd</span>
+<span class="go">132 sd</span>
+<span class="go">133 sd</span>
+<span class="go">134 sd</span>
+<span class="go">135 sd</span>
+<span class="go">179 mmc</span>
+<span class="go">254 device-mapper</span>
+<span class="gp">#</span>
+<span class="gp">#</span>
+</pre></div>
+</div>
+<p>So we can see here that the <strong>major number</strong> allocated to our driver is <strong>248</strong>. We can then create the node file:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> mknod /dev/mmaptest c 248 0
+<span class="gp">#</span>
+</pre></div>
+</div>
+<p>Once this is done we can test our user space driver that uses the new kernel driver:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> ./mmap_test_driver
+<span class="go">Product=939042, package=0, major=0, minor=1</span>
+</pre></div>
+</div>
+<p>We can see in the kernel logs that the <code class="docutils literal"><span class="pre">mmaptest_mmap()</span></code> handler was called:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> dmesg
+<span class="go">....</span>
+<span class="go">[  290.763743] Module mmaptest loaded</span>
+<span class="go">[ 1574.025906] Module mmaptest: mmap handler called.</span>
+</pre></div>
+</div>
+<p>This user space driver (application) is the same as in part 1, but uses <code class="docutils literal"><span class="pre">/dev/mmaptest</span></code> instead of <code class="docutils literal"><span class="pre">/dev/mem</span></code>. Its source code is the following:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdint.h&gt;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#include &lt;sys/types.h&gt;</span>
+<span class="cp">#include &lt;sys/stat.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+       
+<span class="c1">// Include for the mmap() function</span>
+<span class="cp">#include &lt;sys/mman.h&gt;</span>
+
+<span class="kt">int</span> <span class="nf">main</span> <span class="p">()</span>
+<span class="p">{</span>
+        <span class="c1">// File descriptor for the /dev/mem file</span>
+        <span class="kt">int</span> <span class="n">mem_fd</span><span class="p">;</span>
+        
+        <span class="c1">// Pointer to the ID register (will be set by mmap())</span>
+        <span class="kt">uint32_t</span><span class="o">*</span> <span class="n">id</span><span class="p">;</span>
+        
+        <span class="c1">// Fileds of the ID 	</span>
+        <span class="kt">int</span> <span class="n">product_id</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">package_id</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">major_v</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">minor_v</span><span class="p">;</span>
+        
+        <span class="c1">// Open the memory device</span>
+        <span class="n">mem_fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/dev/mmaptest&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+        
+        <span class="k">if</span> <span class="p">(</span><span class="n">mem_fd</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="c1">// Map the ID register to our virtual address space</span>
+                <span class="n">id</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mh">0x100</span><span class="p">,</span>  <span class="n">PROT_READ</span><span class="p">,</span> <span class="n">MAP_PRIVATE</span><span class="p">,</span> <span class="n">mem_fd</span><span class="p">,</span> <span class="mh">0x10000000</span><span class="p">);</span>
+        
+                <span class="c1">// Extract the various bit-fields</span>
+        <span class="n">minor_v</span> 	<span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0x0000000F</span><span class="p">);</span>
+        <span class="n">major_v</span> 	<span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0x000000F0</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">;</span>
+        <span class="n">package_id</span> 	<span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0x00000F00</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">;</span>
+        <span class="n">product_id</span>  <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0xFFFFF000</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">;</span>
+        
+        <span class="c1">// Print the informations readen</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">product_id</span><span class="p">,</span> <span class="n">package_id</span><span class="p">,</span> <span class="n">major_v</span><span class="p">,</span> <span class="n">minor_v</span><span class="p">);</span>
+        
+                <span class="c1">// Unmap the ID register</span>
+                <span class="n">munmap</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="mh">0x100</span><span class="p">);</span>
+                <span class="c1">// Close /dev/mem</span>
+                <span class="n">close</span><span class="p">(</span><span class="n">mem_fd</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">else</span>
+        <span class="p">{</span>
+                <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error oppening &#39;/dev/mmaptest&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+        
+
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="charater-oriented-drivers">
+<h2>Charater Oriented Drivers<a class="headerlink" href="#charater-oriented-drivers" title="Permalink to this headline">¶</a></h2>
+<p>The following code is the implementation of a character device. This driver is able to read and write data from the user land. We can use echo and cat command to interact with this module respectively write and read.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm">skeleton.c</span>
+<span class="cm">*/</span>
+<span class="cp">#include &lt;linux/module.h&gt; </span><span class="cm">/* needed by all modules */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/init.h&gt; </span><span class="cm">/* needed for macros */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/kernel.h&gt; </span><span class="cm">/* needed for debugging */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/fs.h&gt;</span>
+<span class="cp">#include &lt;linux/uaccess.h&gt;</span>
+<span class="cp">#include &lt;linux/cdev.h&gt;</span>
+<span class="cp">#include &lt;linux/string.h&gt;</span>
+
+<span class="cp">#define BUFFER_SIZE 200</span>
+
+<span class="kt">char</span> <span class="n">text</span><span class="p">[</span><span class="n">BUFFER_SIZE</span><span class="p">];</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="p">,</span> <span class="kt">size_t</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="p">,</span> <span class="kt">size_t</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">dev_t</span> <span class="n">skeleton_dev</span><span class="p">;</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">cdev</span> <span class="n">skeleton_cdev</span><span class="p">;</span>
+
+<span class="k">struct</span> <span class="n">file_operations</span> <span class="n">skeleton_fops</span> <span class="o">=</span>
+<span class="p">{</span>
+    <span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">read</span> <span class="o">=</span> <span class="n">device_read</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">device_write</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">open</span> <span class="o">=</span> <span class="n">device_open</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">device_release</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">num_instance</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span>
+<span class="n">module_param</span><span class="p">(</span><span class="n">num_instance</span><span class="p">,</span><span class="kt">int</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">strlen</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">strlen</span><span class="p">(</span><span class="n">text</span><span class="p">);</span>
+    
+    <span class="n">copy_to_user</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">text</span><span class="p">));</span>
+    <span class="n">text</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+    
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Device write</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
+    
+    <span class="n">copy_from_user</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">buff</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">skeleton_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">alloc_chrdev_region</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;skeleton&quot;</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+        <span class="n">cdev_init</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">skeleton_fops</span><span class="p">);</span>
+        <span class="n">skeleton_cdev</span><span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">;</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">cdev_add</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">,</span> <span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> 
+        <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Skeleton device driver loaded</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">status</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">skeleton_exit</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">cdev_del</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">);</span>
+    <span class="n">unregister_chrdev_region</span><span class="p">(</span><span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Linux module skeleton unloaded </span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">skeleton_init</span><span class="p">);</span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">skeleton_exit</span><span class="p">);</span>
+<span class="n">MODULE_AUTHOR</span><span class="p">(</span><span class="s">&quot;Yann Maret&quot;</span><span class="p">);</span>
+<span class="n">MODULE_DESCRIPTION</span><span class="p">(</span><span class="s">&quot;Module skeleton&quot;</span><span class="p">);</span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The device character created using the module code is listed below. A lot of other characters can be show in “/proc/devices”:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> cat /proc/devices
+<span class="go">Character devices:</span>
+<span class="go">...</span>
+<span class="go">136 pts</span>
+<span class="go">180 usb</span>
+<span class="go">189 usb_device</span>
+<span class="go">204 ttySAC</span>
+<span class="go">226 drm</span>
+<span class="go">248 skeleton</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>Now create an access file:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> mknod /dev/mymodule c 248 0
+</pre></div>
+</div>
+<p>Test using “echo” and “cat” command on the module node:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> <span class="nb">echo </span>hello &gt; /dev/mymodule
+<span class="gp">#</span> cat /dev/mymodule
+<span class="go">hello</span>
+</pre></div>
+</div>
+<p>The previous module code will be updated for more instance compatibility. With a number given at loading time that’s represent the number of instance. Each instance will create a variable that store a value between user land and kernel land:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm">skeleton.c</span>
+<span class="cm">*/</span>
+<span class="cp">#include &lt;linux/module.h&gt; </span><span class="cm">/* needed by all modules */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/moduleparam.h&gt;</span><span class="cm">/* needed for module parameters */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/init.h&gt; </span><span class="cm">/* needed for macros */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/kernel.h&gt; </span><span class="cm">/* needed for debugging */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/fs.h&gt;</span>
+<span class="cp">#include &lt;linux/uaccess.h&gt;</span>
+<span class="cp">#include &lt;linux/cdev.h&gt;</span>
+<span class="cp">#include &lt;linux/string.h&gt;</span>
+<span class="cp">#include &lt;linux/slab.h&gt; </span><span class="cm">/* needed for memory allocation */</span><span class="cp"></span>
+<span class="cp">#include &lt;linux/gfp.h&gt;</span>
+
+<span class="cp">#define BUFFER_SIZE 200</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="p">,</span> <span class="kt">size_t</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="p">,</span> <span class="kt">size_t</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">dev_t</span> <span class="n">skeleton_dev</span><span class="p">;</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">cdev</span> <span class="n">skeleton_cdev</span><span class="p">;</span>
+
+<span class="k">struct</span> <span class="n">file_operations</span> <span class="n">skeleton_fops</span> <span class="o">=</span>
+<span class="p">{</span>
+    <span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">read</span> <span class="o">=</span> <span class="n">device_read</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">device_write</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">open</span> <span class="o">=</span> <span class="n">device_open</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">device_release</span>
+<span class="p">};</span>
+
+<span class="kt">char</span><span class="o">**</span> <span class="n">instances_memories</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">num_instance</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span>
+
+<span class="n">module_param</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">module_param</span><span class="p">(</span><span class="n">num_instance</span><span class="p">,</span><span class="kt">int</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">minor</span> <span class="o">=</span> <span class="n">iminor</span><span class="p">(</span><span class="n">filp</span><span class="o">-&gt;</span><span class="n">f_path</span><span class="p">.</span><span class="n">dentry</span><span class="o">-&gt;</span><span class="n">d_inode</span><span class="p">);</span>
+    <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Device read (%u)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">minor</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">strlen</span><span class="p">(</span><span class="n">instances_memories</span><span class="p">[</span><span class="n">minor</span><span class="p">]))</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">strlen</span><span class="p">(</span><span class="n">instances_memories</span><span class="p">[</span><span class="n">minor</span><span class="p">]);</span>
+    
+    <span class="n">copy_to_user</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="n">instances_memories</span><span class="p">[</span><span class="n">minor</span><span class="p">],</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">instances_memories</span><span class="p">[</span><span class="n">minor</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">minor</span> <span class="o">=</span> <span class="n">iminor</span><span class="p">(</span><span class="n">filp</span><span class="o">-&gt;</span><span class="n">f_path</span><span class="p">.</span><span class="n">dentry</span><span class="o">-&gt;</span><span class="n">d_inode</span><span class="p">);</span>
+    <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Device write (%u)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">minor</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
+    <span class="n">copy_from_user</span><span class="p">(</span><span class="n">instances_memories</span><span class="p">[</span><span class="n">minor</span><span class="p">],</span> <span class="n">buff</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">skeleton_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">alloc_chrdev_region</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="s">&quot;skeleton&quot;</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">count</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+        <span class="c1">//allocate memory for each instance</span>
+        <span class="n">instances_memories</span> <span class="o">=</span> <span class="n">kmalloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="o">*</span><span class="n">count</span><span class="p">,</span> <span class="n">GFP_KERNEL</span><span class="p">);</span>
+        <span class="k">for</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">i</span><span class="o">&lt;</span><span class="n">count</span><span class="p">;</span><span class="n">i</span><span class="o">++</span><span class="p">){</span>
+            <span class="n">instances_memories</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">=</span><span class="n">kzalloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">char</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">BUFFER_SIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">GFP_KERNEL</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">cdev_init</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">skeleton_fops</span><span class="p">);</span>
+        <span class="n">skeleton_cdev</span><span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">;</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">cdev_add</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">,</span> <span class="n">skeleton_dev</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> 
+        <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Skeleton device driver loaded</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    
+    <span class="k">return</span> <span class="n">status</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">skeleton_exit</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">cdev_del</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">);</span>
+    <span class="n">unregister_chrdev_region</span><span class="p">(</span><span class="n">skeleton_dev</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Linux module skeleton unloaded </span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">skeleton_init</span><span class="p">);</span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">skeleton_exit</span><span class="p">);</span>
+<span class="n">MODULE_AUTHOR</span><span class="p">(</span><span class="s">&quot;Yann Maret&quot;</span><span class="p">);</span>
+<span class="n">MODULE_DESCRIPTION</span><span class="p">(</span><span class="s">&quot;Module skeleton&quot;</span><span class="p">);</span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Create load kernel with the number of node that we will use. And create access file using mknod function provided by linux kernel:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> insmod mymodule.ko <span class="nv">count</span><span class="o">=</span>3
+
+<span class="gp">#</span> cat /proc/devices
+<span class="go">Character devices:</span>
+<span class="go">...</span>
+<span class="go">248 skeleton</span>
+<span class="go">...</span>
+
+<span class="gp">#</span> mknod /dev/mymodule1 c 248 0
+<span class="gp">#</span> mknod /dev/mymodule2 c 248 1
+<span class="gp">#</span> mknod /dev/mymodule3 c 248 2
+</pre></div>
+</div>
+<p>Test using the previous created node:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> <span class="nb">echo</span> “hello 1” &gt; /dev/mymodule1
+<span class="gp">#</span> <span class="nb">echo</span> “hello 2” &gt; /dev/mymodule2
+<span class="gp">#</span> <span class="nb">echo</span> “hello 3” &gt; /dev/mymodule3
+
+<span class="gp">#</span> cat /dev/mymodule1
+<span class="go">hello 1</span>
+<span class="gp">#</span> cat /dev/mymodule2
+<span class="go">hello 2</span>
+<span class="gp">#</span> cat /dev/mymodule3
+<span class="go">hello 3</span>
+</pre></div>
+</div>
+<p>The following code runs in the user space and read and write data from and to mymodule. The following code take one argument pass to the program and write it to the character device driver previously opened, and read back the data.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+<span class="cp">#include &lt;assert.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">argc</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">memset</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">);</span>
+    
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Write: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+    
+    <span class="kt">int</span> <span class="n">fp</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;(/dev/mymodule&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="n">_RDWR</span><span class="p">);</span>
+    <span class="n">write</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">strlen</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]));</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">read</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">[</span><span class="n">i</span><span class="o">++</span><span class="p">],</span><span class="mi">1</span><span class="p">));</span>
+    
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Read: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">buf</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The result of the program is showed below:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> ./test “Hello”
+<span class="go">Write: Hello</span>
+<span class="go">Read: Hello</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="blocking-operations">
+<h2>Blocking operations<a class="headerlink" href="#blocking-operations" title="Permalink to this headline">¶</a></h2>
+<p>For the blocking opeation, the kernel module should implement the <code class="docutils literal"><span class="pre">poll()</span></code> callback function. In this mode, the <code class="docutils literal"><span class="pre">pool()</span></code> function should block on some wait-queue. The wait queue should then be woken by some event like an IRQ. The above examle uses an IRQ from a GPIO to control the pooling:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;linux/module.h&gt;</span>
+<span class="cp">#include &lt;linux/init.h&gt;</span>
+<span class="cp">#include &lt;linux/kernel.h&gt;</span>
+<span class="cp">#include &lt;linux/device.h&gt;</span>
+<span class="cp">#include &lt;linux/platform_device.h&gt;</span>
+<span class="cp">#include &lt;linux/cdev.h&gt;</span>
+<span class="cp">#include &lt;linux/fs.h&gt;</span>
+<span class="cp">#include &lt;linux/mm.h&gt;</span>
+<span class="cp">#include &lt;linux/interrupt.h&gt; </span>
+<span class="cp">#include &lt;linux/gpio.h&gt;</span>
+<span class="cp">#include &lt;linux/poll.h&gt;</span>
+<span class="cp">#include &lt;linux/wait.h&gt;</span>
+
+
+<span class="cp">#define BUTTON_IO_NR 29</span>
+<span class="c1">// Device structure</span>
+<span class="k">static</span> <span class="kt">dev_t</span> <span class="n">button_dev</span><span class="p">;</span>
+<span class="c1">// Character device structure</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">cdev</span> <span class="n">button_cdev</span><span class="p">;</span>
+
+<span class="c1">// Wait queue for the Button IRQ</span>
+<span class="n">DECLARE_WAIT_QUEUE_HEAD</span><span class="p">(</span><span class="n">button_event_queue</span><span class="p">);</span>
+<span class="kt">bool</span> <span class="n">toggled</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="n">button_value</span> <span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">button_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span><span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">button_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span><span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="nf">button_poll</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">struct</span> <span class="n">poll_table_struct</span><span class="o">*</span> <span class="n">wait</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Wait to have an event in the queue</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Before pool_wait()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="n">poll_wait</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">button_event_queue</span><span class="p">,</span> <span class="n">wait</span><span class="p">);</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;after pool_wait()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">toggled</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;pool_wait() return true</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="c1">// Note that the event was consumed</span>
+        <span class="n">toggled</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+        <span class="c1">// Return that the user-land appliation can read</span>
+        <span class="k">return</span> <span class="n">POLLIN</span> <span class="o">|</span> <span class="n">POLLRDNORM</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">val</span><span class="p">;</span>
+    
+    <span class="c1">// Convert to string</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">button_value</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="s">&quot;1</span><span class="se">\0</span><span class="s">&quot;</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="s">&quot;0</span><span class="se">\0</span><span class="s">&quot;</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// Send to user-land application</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">copy_to_user</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> 
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">EFAULT</span><span class="p">;</span>
+    <span class="p">}</span>		
+    <span class="k">return</span> <span class="mi">2</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">irqreturn_t</span> <span class="nf">button_irq</span><span class="p">(</span><span class="kt">int</span> <span class="n">irq</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">dev_id</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">button_value</span> <span class="o">!=</span> <span class="n">gpio_get_value</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">))</span>
+    <span class="p">{</span>
+    
+        <span class="c1">// For debug (not good becaus of perf)</span>
+        <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;button_irq()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="c1">// Store button value</span>
+        <span class="n">button_value</span> <span class="o">=</span> <span class="n">gpio_get_value</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">);</span>
+    
+        <span class="c1">// Note that is was toogle since last read</span>
+        <span class="n">toggled</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    
+        <span class="c1">// Wakeup the tasks that are using pool()</span>
+        <span class="n">wake_up_interruptible</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_event_queue</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// Tell the kernel that we have handled the interrupt event</span>
+    <span class="k">return</span> <span class="n">IRQ_HANDLED</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="n">button_fops</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">read</span> <span class="o">=</span> <span class="n">button_read</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">button_write</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">poll</span> <span class="o">=</span> <span class="n">button_poll</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">open</span> <span class="o">=</span> <span class="n">button_open</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">button_release</span><span class="p">,</span>
+<span class="p">};</span>
+
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">button_init</span><span class="p">(</span><span class="kt">void</span>  <span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="c1">// 1) Register for a Major device number</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">alloc_chrdev_region</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">);</span>
+    <span class="c1">// If it worked</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// 2) Register the strucutre of call-back function pointers</span>
+        <span class="n">cdev_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_cdev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">button_fops</span><span class="p">);</span>
+        <span class="n">button_cdev</span><span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">;</span>
+        <span class="c1">// 3) Registter the caracter device</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">cdev_add</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_cdev</span><span class="p">,</span> <span class="n">button_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Failed to allocate character device&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+    
+    <span class="c1">// Create the wait queue</span>
+    <span class="n">init_waitqueue_head</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_event_queue</span><span class="p">);</span>   
+    <span class="n">toggled</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    
+    <span class="c1">//register the IRQ</span>
+    <span class="n">gpio_request</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">);</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">request_irq</span><span class="p">(</span><span class="n">gpio_to_irq</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">),</span> <span class="n">button_irq</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Failed to map button IRQ&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Print that module is being loaded</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module button loaded</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">button_exit</span><span class="p">(</span><span class="kt">void</span>  <span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Free the IRQ</span>
+    <span class="n">free_irq</span><span class="p">(</span><span class="n">gpio_to_irq</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">),</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="c1">// Free the GPIO</span>
+    <span class="n">gpio_free</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">);</span>
+    <span class="c1">// Delete the device driver</span>
+    <span class="n">cdev_del</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_cdev</span><span class="p">);</span>
+    <span class="n">unregister_chrdev_region</span><span class="p">(</span><span class="n">button_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    
+    <span class="c1">// Print that everthing is done</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module button removed</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">button_init</span><span class="p">);</span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">button_exit</span><span class="p">);</span>
+
+<span class="n">MODULE_AUTHOR</span><span class="p">(</span><span class="s">&quot;Antoine Zen-Ruffinen &lt;antoine.zen@gmail.com&gt;&quot;</span><span class="p">);</span>
+<span class="n">MODULE_DESCRIPTION</span><span class="p">(</span><span class="s">&quot;Button driver module&quot;</span><span class="p">);</span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Then the user-land application can use <code class="docutils literal"><span class="pre">select()</span></code> to wait on this event. The <code class="docutils literal"><span class="pre">select()</span></code> syscall will relay on the <code class="docutils literal"><span class="pre">.poll</span></code> call-back function of the caracter driver pointed by the passed file descriptor. The following code does this to count the events:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdint.h&gt;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#include &lt;sys/types.h&gt;</span>
+<span class="cp">#include &lt;sys/stat.h&gt;</span>
+<span class="cp">#include &lt;sys/select.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+       
+
+<span class="kt">int</span> <span class="nf">main</span> <span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">retval</span><span class="p">;</span>
+    <span class="c1">//struct timeval tv;</span>
+    <span class="c1">// File descriptor for the /dev/button file</span>
+    <span class="kt">int</span> <span class="n">button_fd</span><span class="p">;</span>
+    <span class="c1">// create &amp; init file descriptor set for the select() function</span>
+    <span class="n">fd_set</span> <span class="n">active_fds</span><span class="p">,</span> <span class="n">rfds</span><span class="p">;</span>
+    <span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rfds</span><span class="p">);</span> 
+    
+    <span class="c1">// Open the button device</span>
+    <span class="n">button_fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/dev/button&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+
+    <span class="c1">// Check that the file was oppend</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">button_fd</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// Add it to the file desciptor set</span>
+        <span class="n">FD_SET</span><span class="p">(</span><span class="n">button_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rfds</span><span class="p">);</span>
+
+        <span class="k">while</span><span class="p">(</span><span class="n">counter</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="c1">// Copy the fd_set as it will be modifed by select()</span>
+            <span class="n">active_fds</span> <span class="o">=</span> <span class="n">rfds</span><span class="p">;</span>
+            <span class="c1">// Wait for the read event to come</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="n">select</span><span class="p">(</span><span class="n">button_fd</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">active_fds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+            <span class="c1">// Handle error!</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">retval</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">perror</span><span class="p">(</span><span class="s">&quot;select()&quot;</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="c1">// Normal case (no error)</span>
+            <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">retval</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">counter</span><span class="o">++</span><span class="p">;</span>
+                <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Counter is now %d.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">counter</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="c1">// Handle timeout (should not append!)</span>
+            <span class="k">else</span>
+            <span class="p">{</span>
+                <span class="c1">// This will never be reached, but keep for debug.</span>
+                <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Timeout</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="c1">// Close the periferal</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">button_fd</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">&quot;Error opening &#39;/dev/button&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>We can install the driver:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> insmod button.ko
+<span class="gp">#</span> dmesg
+<span class="go">.....</span>
+<span class="go">[  456.158645] Module button loaded</span>
+<span class="gp">#</span> cat /proc/devices
+<span class="go">Character devices:</span>
+<span class="go">  1 mem</span>
+<span class="go">  2 pty</span>
+<span class="go">...</span>
+<span class="go">248 button</span>
+<span class="go">...</span>
+<span class="gp">#</span> mknod /dev/button c 248 0
+</pre></div>
+</div>
+<p>And test the application:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> ./button_test &amp;
+<span class="gp">#</span> dmesg
+<span class="go">...</span>
+<span class="go">[  673.581700] Before pool_wait()</span>
+<span class="go">[  673.583421] after pool_wait()</span>
+<span class="gp">#</span> <span class="nb">fg</span>
+<span class="go">./button_test</span>
+<span class="go">Counter is now 1.</span>
+<span class="go">Counter is now 2.</span>
+<span class="go">Counter is now 3.</span>
+<span class="go">Counter is now 4.</span>
+<span class="go">Counter is now 5.</span>
+<span class="go">Counter is now 6.</span>
+<span class="go">Counter is now 7.</span>
+<span class="go">Counter is now 8.</span>
+<span class="go">Counter is now 9.</span>
+<span class="go">...</span>
+<span class="go">^C</span>
+</pre></div>
+</div>
+<p>We can see that the counter is incremented every time we press on the button. The kernel logs gives some detail on what appends:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> dmesg
+<span class="go">[  727.092662] pool_wait() return true</span>
+<span class="go">[  727.096203] Before pool_wait()</span>
+<span class="go">[  727.098918] after pool_wait()</span>
+<span class="go">[  727.210328] button_irq()</span>
+<span class="go">[  727.211629] Before pool_wait()</span>
+<span class="go">[  727.214424] after pool_wait()</span>
+<span class="go">[  727.217613] pool_wait() return true</span>
+<span class="go">[  727.221161] Before pool_wait()</span>
+<span class="go">[  727.223873] after pool_wait()</span>
+<span class="go">[  727.312790] button_irq()</span>
+<span class="go">[  727.314086] Before pool_wait()</span>
+<span class="go">[  727.316933] after pool_wait()</span>
+<span class="go">[  727.319828] pool_wait() return true</span>
+<span class="go">[  727.323883] Before pool_wait()</span>
+<span class="go">[  727.326381] after pool_wait()</span>
+<span class="go">[  767.894888] Before pool_wait()</span>
+<span class="go">[  767.896515] after pool_wait()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="sysfs">
+<h2>Sysfs<a class="headerlink" href="#sysfs" title="Permalink to this headline">¶</a></h2>
+<p>This code implements a character driver on a sysfs. 3 members can be access “marque”, “model” and “vitesse”. Only “echo” and “cat” are used for the purpose.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm">skeleton.c</span>
+<span class="cm">*/</span>
+<span class="cp">#include &lt;linux/module.h&gt;</span>
+<span class="cm">/* needed by all modules */</span>
+<span class="cp">#include &lt;linux/init.h&gt;</span>
+<span class="cm">/* needed for macros */</span>
+<span class="cp">#include &lt;linux/kernel.h&gt;</span>
+<span class="cm">/* needed for debugging */</span>
+<span class="cp">#include &lt;linux/fs.h&gt;</span>
+<span class="cp">#include &lt;linux/uaccess.h&gt;</span>
+<span class="cp">#include &lt;linux/cdev.h&gt;</span>
+<span class="cp">#include &lt;linux/string.h&gt;</span>
+<span class="cp">#include &lt;linux/device.h&gt;</span>
+<span class="cp">#include &lt;linux/platform_device.h&gt;</span>
+<span class="cp">#define BUFFER_SIZE 200</span>
+
+<span class="kt">char</span> <span class="n">text</span><span class="p">[</span><span class="n">BUFFER_SIZE</span><span class="p">];</span>
+
+<span class="c1">//storage structure accessed by sysfs</span>
+<span class="k">struct</span> <span class="n">struct_voiture</span><span class="p">{</span>
+    <span class="kt">char</span> <span class="n">marque</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">modele</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">vitesse_max</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">struct_voiture</span> <span class="n">voiture</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">marque</span><span class="o">=</span><span class="s">&quot;Subaru</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">modele</span><span class="o">=</span><span class="s">&quot;Impreza</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">vitesse_max</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="p">,</span> <span class="kt">size_t</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="p">,</span> <span class="kt">size_t</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">dev_t</span> <span class="n">skeleton_dev</span><span class="p">;</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">cdev</span> <span class="n">skeleton_cdev</span><span class="p">;</span>
+
+<span class="c1">// sysfs</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">sysfs_dev_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">platform_driver</span> <span class="n">sysfs_driver</span><span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">driver</span> <span class="o">=</span> <span class="p">{.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;skeleton&quot;</span><span class="p">,},</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">platform_device</span> <span class="n">sysfs_device</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">name</span><span class="o">=</span> <span class="s">&quot;skeleton&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">dev</span><span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">sysfs_dev_release</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">file_operations</span> <span class="n">skeleton_fops</span> <span class="o">=</span>
+<span class="p">{</span>
+    <span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">read</span> <span class="o">=</span> <span class="n">device_read</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">device_write</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">open</span> <span class="o">=</span> <span class="n">device_open</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">device_release</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
+        <span class="n">len</span> <span class="o">=</span> <span class="n">count</span><span class="p">;</span>
+    <span class="n">strncpy</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//modele must be converted to cstring</span>
+    <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
+        <span class="n">len</span> <span class="o">=</span> <span class="n">count</span><span class="p">;</span>
+    <span class="n">strncpy</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">sprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;%u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">voiture</span><span class="p">.</span><span class="n">vitesse_max</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//buf must be converted to int</span>
+    <span class="kt">long</span> <span class="n">vitesse</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">kstrtol</span> <span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">vitesse</span><span class="p">))</span>
+        <span class="n">voiture</span><span class="p">.</span><span class="n">vitesse_max</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">vitesse</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buf</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">//declare devices attributes structures</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">marque</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">skeleton_show_marque</span><span class="p">,</span> <span class="n">skeleton_store_marque</span><span class="p">);</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">modele</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">skeleton_show_modele</span><span class="p">,</span> <span class="n">skeleton_store_modele</span><span class="p">);</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">vitesse</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">skeleton_show_vitesse</span><span class="p">,</span> <span class="n">skeleton_store_vitesse</span><span class="p">);</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">device_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span> <span class="o">*</span><span class="n">inode</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">strlen</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">strlen</span><span class="p">(</span><span class="n">text</span><span class="p">);</span>
+    <span class="n">copy_to_user</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">text</span><span class="p">));</span>
+    <span class="n">text</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Device write</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
+        <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
+    <span class="n">copy_from_user</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">buff</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">skeleton_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">alloc_chrdev_region</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;skeleton&quot;</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+        <span class="n">cdev_init</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">skeleton_fops</span><span class="p">);</span>
+        <span class="n">skeleton_cdev</span><span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">;</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">cdev_add</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">,</span> <span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> 
+        <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Skeleton device driver loaded</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="c1">//sysfs register driver+device and add devices attributes</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">platform_driver_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_driver</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">platform_device_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_marque</span><span class="p">);</span>
+    
+    <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_modele</span><span class="p">);</span>
+    <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_vitesse</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">status</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">skeleton_exit</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//sysfs remove devices attributes and unregister device+driver</span>
+    <span class="n">device_remove_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span> <span class="n">dev_attr_marque</span><span class="p">);</span>
+    <span class="n">device_remove_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span> <span class="n">dev_attr_modele</span><span class="p">);</span>
+    <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_vitesse</span><span class="p">);</span>
+    <span class="n">platform_device_unregister</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">);</span>
+    <span class="n">platform_driver_unregister</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_driver</span><span class="p">);</span>
+    <span class="n">cdev_del</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">skeleton_cdev</span><span class="p">);</span>
+    <span class="n">unregister_chrdev_region</span><span class="p">(</span><span class="n">skeleton_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Linux module skeleton unloaded </span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">skeleton_init</span><span class="p">);</span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">skeleton_exit</span><span class="p">);</span>
+<span class="n">MODULE_AUTHOR</span><span class="p">(</span><span class="s">&quot;Yann Maret&quot;</span><span class="p">);</span>
+<span class="n">MODULE_DESCRIPTION</span><span class="p">(</span><span class="s">&quot;Module skeleton&quot;</span><span class="p">);</span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Search of the skeleton module, the module isn’t mounted yet:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> ls /sys/bus/devices/platform/
+<span class="go">...</span>
+<span class="go">hello 3</span>
+<span class="go">alarmtimer</span>
+<span class="go">amba</span>
+<span class="go">arm-pmu</span>
+<span class="go">exynos-cpufreq</span>
+<span class="go">exynos-drm</span>
+<span class="go">gpioleds</span>
+<span class="go">power</span>
+<span class="go">pwmleds</span>
+<span class="go">pwrseq</span>
+<span class="go">reg-dummy</span>
+<span class="go">serial8250</span>
+<span class="go">sound</span>
+<span class="go">uevent</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>After a module load, the peripheric is now visible:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> ls /sys/bus/devices/platform/
+<span class="go">...</span>
+<span class="go">hello 3</span>
+<span class="go">alarmtimer</span>
+<span class="go">amba</span>
+<span class="go">arm-pmu</span>
+<span class="go">exynos-cpufreq</span>
+<span class="go">exynos-drm</span>
+<span class="go">gpioleds</span>
+<span class="go">power</span>
+<span class="go">pwmleds</span>
+<span class="go">pwrseq</span>
+<span class="go">reg-dummy</span>
+<span class="go">serial8250</span>
+<span class="go">skeleton</span>
+<span class="go">sound</span>
+<span class="go">uevent</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>Inside the module skeleton, we find “marque”, “model” and “vitesse”:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> ls /sys/bus/devices/platform/skeleton/
+<span class="go">driver      modalias        power           uevent</span>
+<span class="go">marque      modele  subsystem       vitesse</span>
+</pre></div>
+</div>
+<p>Using all 3 attributes with echo and cat, let’s try:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> <span class="nb">cd</span> /sys/bus/devices/platform/skeleton/
+<span class="gp">#</span> cat marque
+<span class="go">Subaru</span>
+<span class="gp">#</span> cat modele
+<span class="go">Impreza</span>
+<span class="gp">#</span> cat vitesse
+<span class="gp">#</span> 300
+<span class="gp">#</span> <span class="nb">echo </span>Ferrari &gt; marque
+<span class="gp">#</span> <span class="nb">echo </span>California &gt; modele
+<span class="gp">#</span> <span class="nb">echo </span>330 &gt; marque
+<span class="gp">#</span> cat marque
+<span class="go">Ferrari</span>
+<span class="gp">#</span> cat modele
+<span class="go">California</span>
+<span class="gp">#</span> cat vitesse
+<span class="gp">#</span> 330
+</pre></div>
+</div>
+</div>
+<div class="section" id="device-manager">
+<h2>Device Manager<a class="headerlink" href="#device-manager" title="Permalink to this headline">¶</a></h2>
+<p>In this part we will use <code class="docutils literal"><span class="pre">mdev</span></code> to create the node file for us. The kernel module for this will take the example of <em>Blocking device</em> part but adding the <em>Sysfs</em> part to make <code class="docutils literal"><span class="pre">mdev</span></code> able to detect it. The user space application will be the same than for the <em>Blocking device</em> part. The code of the merged kernel module is given hereafter:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;linux/module.h&gt;</span>
+<span class="cp">#include &lt;linux/init.h&gt;</span>
+<span class="cp">#include &lt;linux/kernel.h&gt;</span>
+<span class="cp">#include &lt;linux/device.h&gt;</span>
+<span class="cp">#include &lt;linux/platform_device.h&gt;</span>
+<span class="cp">#include &lt;linux/cdev.h&gt;</span>
+<span class="cp">#include &lt;linux/fs.h&gt;</span>
+<span class="cp">#include &lt;linux/mm.h&gt;</span>
+<span class="cp">#include &lt;linux/interrupt.h&gt; </span>
+<span class="cp">#include &lt;linux/gpio.h&gt;</span>
+<span class="cp">#include &lt;linux/poll.h&gt;</span>
+<span class="cp">#include &lt;linux/wait.h&gt;</span>
+
+
+<span class="cp">#define BUTTON_IO_NR 29</span>
+<span class="c1">// Device structure</span>
+<span class="k">static</span> <span class="kt">dev_t</span> <span class="n">button_dev</span><span class="p">;</span>
+<span class="c1">// Character device structure</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">cdev</span> <span class="n">button_cdev</span><span class="p">;</span>
+
+
+<span class="cp">#define BUFFER_SIZE 200</span>
+
+<span class="kt">char</span> <span class="n">text</span><span class="p">[</span><span class="n">BUFFER_SIZE</span><span class="p">];</span>
+
+<span class="c1">//storage structure accessed by sysfs</span>
+<span class="k">struct</span> <span class="n">struct_voiture</span><span class="p">{</span>
+    <span class="kt">char</span> <span class="n">marque</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">modele</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">vitesse_max</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">struct_voiture</span> <span class="n">voiture</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">marque</span><span class="o">=</span><span class="s">&quot;Subaru</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">modele</span><span class="o">=</span><span class="s">&quot;Impreza</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">vitesse_max</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="p">};</span>
+
+<span class="c1">// sysfs</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">sysfs_dev_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">platform_driver</span> <span class="n">sysfs_driver</span><span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">driver</span> <span class="o">=</span> <span class="p">{.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;button&quot;</span><span class="p">,},</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">platform_device</span> <span class="n">sysfs_device</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">name</span><span class="o">=</span> <span class="s">&quot;button&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">dev</span><span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">sysfs_dev_release</span>
+<span class="p">};</span>
+
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
+        <span class="n">len</span> <span class="o">=</span> <span class="n">count</span><span class="p">;</span>
+    <span class="n">strncpy</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//modele must be converted to cstring</span>
+    <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
+        <span class="n">len</span> <span class="o">=</span> <span class="n">count</span><span class="p">;</span>
+    <span class="n">strncpy</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+    <span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">sprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;%u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">voiture</span><span class="p">.</span><span class="n">vitesse_max</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//buf must be converted to int</span>
+    <span class="kt">long</span> <span class="n">vitesse</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">kstrtol</span> <span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">vitesse</span><span class="p">))</span>
+        <span class="n">voiture</span><span class="p">.</span><span class="n">vitesse_max</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">vitesse</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buf</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">//declare devices attributes structures</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">marque</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">button_show_marque</span><span class="p">,</span> <span class="n">button_store_marque</span><span class="p">);</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">modele</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">button_show_modele</span><span class="p">,</span> <span class="n">button_store_modele</span><span class="p">);</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">vitesse</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">button_show_vitesse</span><span class="p">,</span> <span class="n">button_store_vitesse</span><span class="p">);</span>
+
+
+<span class="c1">// Wait queue for the Button IRQ</span>
+<span class="n">DECLARE_WAIT_QUEUE_HEAD</span><span class="p">(</span><span class="n">button_event_queue</span><span class="p">);</span>
+<span class="kt">bool</span> <span class="n">toggled</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="n">button_value</span> <span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+
+
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">button_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span><span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">button_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">inode</span><span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="nf">button_poll</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">struct</span> <span class="n">poll_table_struct</span><span class="o">*</span> <span class="n">wait</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Wait to have an event in the queue</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Before pool_wait()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="n">poll_wait</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">button_event_queue</span><span class="p">,</span> <span class="n">wait</span><span class="p">);</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;after pool_wait()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">toggled</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;pool_wait() return true</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="c1">// Note that the event was consumed</span>
+        <span class="n">toggled</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+        <span class="c1">// Return that the user-land appliation can read</span>
+        <span class="k">return</span> <span class="n">POLLIN</span> <span class="o">|</span> <span class="n">POLLRDNORM</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">val</span><span class="p">;</span>
+    
+    <span class="c1">// Convert to string</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">button_value</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="s">&quot;1</span><span class="se">\0</span><span class="s">&quot;</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="s">&quot;0</span><span class="se">\0</span><span class="s">&quot;</span><span class="p">;</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// Send to user-land application</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">copy_to_user</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> 
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">EFAULT</span><span class="p">;</span>
+    <span class="p">}</span>       
+    <span class="k">return</span> <span class="mi">2</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">irqreturn_t</span> <span class="nf">button_irq</span><span class="p">(</span><span class="kt">int</span> <span class="n">irq</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">dev_id</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">button_value</span> <span class="o">!=</span> <span class="n">gpio_get_value</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">))</span>
+    <span class="p">{</span>
+    
+        <span class="c1">// For debug (not good becaus of perf)</span>
+        <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;button_irq()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="c1">// Store button value</span>
+        <span class="n">button_value</span> <span class="o">=</span> <span class="n">gpio_get_value</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">);</span>
+    
+        <span class="c1">// Note that is was toogle since last read</span>
+        <span class="n">toggled</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    
+        <span class="c1">// Wakeup the tasks that are using pool()</span>
+        <span class="n">wake_up_interruptible</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_event_queue</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// Tell the kernel that we have handled the interrupt event</span>
+    <span class="k">return</span> <span class="n">IRQ_HANDLED</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">file_operations</span> <span class="n">button_fops</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">read</span> <span class="o">=</span> <span class="n">button_read</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">button_write</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">poll</span> <span class="o">=</span> <span class="n">button_poll</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">open</span> <span class="o">=</span> <span class="n">button_open</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">button_release</span><span class="p">,</span>
+<span class="p">};</span>
+
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">button_init</span><span class="p">(</span><span class="kt">void</span>  <span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="c1">// 1) Register for a Major device number</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">alloc_chrdev_region</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_dev</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">);</span>
+    <span class="c1">// If it worked</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// 2) Register the strucutre of call-back function pointers</span>
+        <span class="n">cdev_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_cdev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">button_fops</span><span class="p">);</span>
+        <span class="n">button_cdev</span><span class="p">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">THIS_MODULE</span><span class="p">;</span>
+        <span class="c1">// 3) Registter the caracter device</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">cdev_add</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_cdev</span><span class="p">,</span> <span class="n">button_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Failed to allocate character device&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+    
+    <span class="c1">// Create the wait queue</span>
+    <span class="n">init_waitqueue_head</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_event_queue</span><span class="p">);</span>   
+    <span class="n">toggled</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    
+    <span class="c1">//register the IRQ</span>
+    <span class="n">gpio_request</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">);</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">request_irq</span><span class="p">(</span><span class="n">gpio_to_irq</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">),</span> <span class="n">button_irq</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Failed to map button IRQ&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+        <span class="c1">//sysfs register driver+device and add devices attributes</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">platform_driver_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_driver</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">platform_device_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_marque</span><span class="p">);</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_modele</span><span class="p">);</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_vitesse</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Print that module is being loaded</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module button loaded</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">button_exit</span><span class="p">(</span><span class="kt">void</span>  <span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">//sysfs remove devices attributes and unregister device+driver</span>
+    <span class="n">device_remove_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span> <span class="n">dev_attr_marque</span><span class="p">);</span>
+    <span class="n">device_remove_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span> <span class="n">dev_attr_modele</span><span class="p">);</span>
+    <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_vitesse</span><span class="p">);</span>
+    <span class="n">platform_device_unregister</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">);</span>
+    <span class="n">platform_driver_unregister</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_driver</span><span class="p">);</span>
+
+    <span class="c1">// Free the IRQ</span>
+    <span class="n">free_irq</span><span class="p">(</span><span class="n">gpio_to_irq</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">),</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="c1">// Free the GPIO</span>
+    <span class="n">gpio_free</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">);</span>
+    <span class="c1">// Delete the device driver</span>
+    <span class="n">cdev_del</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_cdev</span><span class="p">);</span>
+    <span class="n">unregister_chrdev_region</span><span class="p">(</span><span class="n">button_dev</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    
+    <span class="c1">// Print that everthing is done</span>
+    <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module button removed</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">button_init</span><span class="p">);</span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">button_exit</span><span class="p">);</span>
+
+<span class="n">MODULE_AUTHOR</span><span class="p">(</span><span class="s">&quot;Antoine Zen-Ruffinen &lt;antoine.zen@gmail.com&gt;&quot;</span><span class="p">);</span>
+<span class="n">MODULE_DESCRIPTION</span><span class="p">(</span><span class="s">&quot;Button driver module&quot;</span><span class="p">);</span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>We can test the installation of the kernel driver:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> insmod button_sysfs.ko
+<span class="gp">#</span> dmesg
+<span class="go">...</span>
+<span class="go">[ 5178.208953] Module button loaded</span>
+
+<span class="gp">#</span> ls /sys/devices/platform/skeleton/
+<span class="go">driver           modalias         subsystem</span>
+<span class="go">driver_override  modele           uevent</span>
+<span class="go">marque           power            vitesse</span>
+
+<span class="gp">#</span> cat /proc/devices
+<span class="go">Character devices:</span>
+<span class="go">...</span>
+<span class="go">248 button</span>
+<span class="go">...</span>
+<span class="gp">#</span> ls /sys/devices/platform/button/
+<span class="go">driver           modalias         subsystem</span>
+<span class="go">driver_override  modele           uevent</span>
+<span class="go">marque           power            vitesse</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">mdev</span></code> utility will detect the folder in <code class="docutils literal"><span class="pre">/sys/devices/platform</span></code> and create the node file <code class="docutils literal"><span class="pre">/dev/button</span></code> using the following rule:</p>
+<div class="highlight-python"><div class="highlight"><pre>button          root:root 666
+</pre></div>
+</div>
+<p>The rule should be added to <code class="docutils literal"><span class="pre">/etc/mdev.conf</span></code>. Then if we run <code class="docutils literal"><span class="pre">mdev</span> <span class="pre">-s</span></code> the node file will be created:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> mdev -s
+<span class="gp">#</span> ls /dev/button
+<span class="go">button</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="file_system.html" class="btn btn-neutral float-right" title="File Systems" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="kernel_module.html" class="btn btn-neutral" title="Kernel Modules" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Antoine Zen-Ruffinen, Yann Maret.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
