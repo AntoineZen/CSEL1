@@ -50,13 +50,22 @@ static struct platform_device sysfs_device = {
 };
 
 
-static ssize_t button_show_marque(struct device* dev, struct device_attribute * attr, char * buf)
+static ssize_t button_show_marque(
+    struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
+    )
 {
     strcpy(buf, voiture.marque);
     return strlen(voiture.marque);
 }
 
-static ssize_t button_store_marque(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+static ssize_t button_store_marque(
+    struct device * dev, 
+    struct device_attribute * attr, 
+    const char * buf, 
+    size_t count
+    )
 {
     int len = sizeof(voiture.marque) - 1;
     if (len > count)
@@ -66,14 +75,23 @@ static ssize_t button_store_marque(struct device * dev, struct device_attribute 
     return len;
 }
 
-static ssize_t button_show_modele(struct device* dev, struct device_attribute * attr, char * buf)
+static ssize_t button_show_modele(
+    struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
+    )
 {
     //modele must be converted to cstring
     strcpy(buf, voiture.modele);
     return strlen(voiture.modele);
 }
 
-static ssize_t button_store_modele(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+static ssize_t button_store_modele(
+    struct device * dev, 
+    struct device_attribute * attr, 
+    const char * buf, 
+    size_t count
+    )
 {
     int len = sizeof(voiture.modele) - 1;
     if (len > count)
@@ -83,12 +101,21 @@ static ssize_t button_store_modele(struct device * dev, struct device_attribute 
     return len;
 }
 
-static ssize_t button_show_vitesse(struct device* dev, struct device_attribute * attr, char * buf)
+static ssize_t button_show_vitesse(
+    struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
+    )
 {
     return sprintf(buf, "%u\n",voiture.vitesse_max);
 }
 
-static ssize_t button_store_vitesse(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+static ssize_t button_store_vitesse(
+    struct device * dev, 
+    struct device_attribute * attr, 
+    const char * buf, s
+    ize_t count
+    )
 {
     //buf must be converted to int
     long vitesse;
@@ -121,7 +148,10 @@ static int button_release(struct inode* i, struct file* f)
     return 0;
 }
 
-static unsigned int button_poll(struct file* f, struct poll_table_struct* wait)
+static unsigned int button_poll(
+    struct file* f, 
+    struct poll_table_struct* wait
+    )
 {
     // Wait to have an event in the queue
     pr_info("Before pool_wait()\n");
@@ -138,7 +168,12 @@ static unsigned int button_poll(struct file* f, struct poll_table_struct* wait)
     return 0;
 }
 
-static ssize_t button_read(struct file* f, char* data, size_t size, loff_t* offset)
+static ssize_t button_read(
+    struct file* f, 
+    char* data, 
+    size_t size, 
+    loff_t* offset
+    )
 {
     char* val;
     
@@ -160,7 +195,12 @@ static ssize_t button_read(struct file* f, char* data, size_t size, loff_t* offs
     return 2;
 }
 
-static ssize_t button_write(struct file* f, const char* data, size_t size, loff_t* offset)
+static ssize_t button_write(
+    struct file* f, 
+    const char* data, 
+    size_t size, 
+    loff_t* offset
+    )
 {
     return size;
 }
@@ -224,7 +264,13 @@ static int __init button_init(void  )
     
     //register the IRQ
     gpio_request(BUTTON_IO_NR, "button");
-    status = request_irq(gpio_to_irq(BUTTON_IO_NR), button_irq, 0, "button", NULL);
+    status = request_irq(
+        gpio_to_irq(BUTTON_IO_NR), 
+        button_irq, 
+        0, 
+        "button", 
+        NULL
+        );
     if (status != 0)
     {
         pr_err("Failed to map button IRQ");

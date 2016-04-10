@@ -59,13 +59,21 @@ struct file_operations skeleton_fops =
     .release = device_release
 };
 
-static ssize_t skeleton_show_marque(struct device* dev, struct device_attribute * attr, char * buf)
+static ssize_t skeleton_show_marque(
+    struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
+    )
 {
     strcpy(buf, voiture.marque);
     return strlen(voiture.marque);
 }
 
-static ssize_t skeleton_store_marque(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+static ssize_t skeleton_store_marque(
+    struct device * dev, 
+    struct device_attribute * attr, 
+    const char * buf, size_t count
+    )
 {
     int len = sizeof(voiture.marque) - 1;
     if (len > count)
@@ -75,14 +83,20 @@ static ssize_t skeleton_store_marque(struct device * dev, struct device_attribut
     return len;
 }
 
-static ssize_t skeleton_show_modele(struct device* dev, struct device_attribute * attr, char * buf)
+static ssize_t skeleton_show_modele(struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
+    )
 {
     //modele must be converted to cstring
     strcpy(buf, voiture.modele);
     return strlen(voiture.modele);
 }
 
-static ssize_t skeleton_store_modele(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+static ssize_t skeleton_store_modele(struct device * dev, 
+    struct device_attribute * attr, 
+    const char * buf, size_t count
+    )
 {
     int len = sizeof(voiture.modele) - 1;
     if (len > count)
@@ -92,12 +106,21 @@ static ssize_t skeleton_store_modele(struct device * dev, struct device_attribut
     return len;
 }
 
-static ssize_t skeleton_show_vitesse(struct device* dev, struct device_attribute * attr, char * buf)
+static ssize_t skeleton_show_vitesse(
+    struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
+    )
 {
     return sprintf(buf, "%u\n",voiture.vitesse_max);
 }
 
-static ssize_t skeleton_store_vitesse(struct device * dev, struct device_attribute * attr, const char * buf, size_t count)
+static ssize_t skeleton_store_vitesse(
+    struct device * dev, 
+    struct device_attribute * attr, 
+    const char * buf, 
+    size_t count
+    )
 {
     //buf must be converted to int
     long vitesse;
@@ -121,7 +144,12 @@ static int device_release(struct inode *inode, struct file *file)
     return 0;
 }
 
-static ssize_t device_read(struct file *filp, char *buff, size_t len, loff_t *off)
+static ssize_t device_read(
+    struct file *filp, 
+    char *buff, 
+    size_t len, 
+    loff_t *off)
+
 {
     if(len>BUFFER_SIZE)
         len=BUFFER_SIZE;
@@ -132,7 +160,12 @@ static ssize_t device_read(struct file *filp, char *buff, size_t len, loff_t *of
     return len;
 }
 
-static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t *off)
+static ssize_t device_write(
+    struct file *filp,
+    const char *buff, 
+    size_t len, 
+    loff_t *off
+    )
 {
     pr_info ("Device write\n");
     if(len>BUFFER_SIZE)

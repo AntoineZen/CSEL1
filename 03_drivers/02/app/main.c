@@ -40,7 +40,13 @@ int main ()
         product_id  = (*id & 0xFFFFF000) >> 12;
         
         // Print the informations readen
-        printf("Product=%d, package=%d, major=%d, minor=%d\n", product_id, package_id, major_v, minor_v);
+        printf(
+                "Product=%d, package=%d, major=%d, minor=%d\n", 
+                product_id, 
+                package_id, 
+                major_v, 
+                minor_v
+                );
         
                 // Unmap the ID register
                 munmap(id, 0x100);

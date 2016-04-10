@@ -37,7 +37,13 @@ static int __init skeleton_init(void  )
     	product_id  = (id & 0xFFFFF000) >> 12;
     	
     	// Print the informations readen
-    	pr_info("Product=%d, package=%d, major=%d, minor=%d\n", product_id, package_id, major_v, minor_v);
+    	pr_info(
+            "Product=%d, package=%d, major=%d, minor=%d\n", 
+            product_id, 
+            package_id, 
+            major_v, 
+            minor_v
+            );
     }
     
     return 0;

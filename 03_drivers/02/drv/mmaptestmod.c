@@ -35,7 +35,13 @@ int mmaptest_mmap(struct file* f, struct vm_area_struct* vma)
 {
 
     pr_info("Module mmaptest: mmap handler called.\n");
-    return remap_pfn_range(vma, vma->vm_start, REG_ADDR >> PAGE_SHIFT, REG_SIZE,  vma->vm_page_prot);
+    return remap_pfn_range(
+        vma, 
+        vma->vm_start, 
+        REG_ADDR >> PAGE_SHIFT, 
+        REG_SIZE,  
+        vma->vm_page_prot
+        );
 }
 
 

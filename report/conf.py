@@ -226,7 +226,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'CSEL1.tex', 'CSEL1 Laboratory report',
-   'Antoine Zen-Ruffinen, Yann Maret', 'report'),
+   'Antoine Zen-Ruffinen, Yann Maret', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

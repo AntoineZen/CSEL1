@@ -42,7 +42,12 @@ static int device_release(struct inode *inode, struct file *file)
     return 0;
 }
 
-static ssize_t device_read(struct file *filp, char *buff, size_t len, loff_t *off)
+static ssize_t device_read(
+    struct file *filp,
+    char *buff, 
+    size_t len, 
+    loff_t *off
+    )
 {
     if(len>BUFFER_SIZE)
         len=BUFFER_SIZE;
@@ -55,7 +60,12 @@ static ssize_t device_read(struct file *filp, char *buff, size_t len, loff_t *of
     return len;
 }
 
-static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t *off)
+static ssize_t device_write(
+    struct file *filp, 
+    const char *buff, 
+    size_t len, 
+    loff_t *off
+    )
 {
     pr_info ("Device write\n");
     if(len>BUFFER_SIZE)
