@@ -18,6 +18,7 @@ all: $(OBJDIR)/ $(EXEC)
 	
 $(EXEC): $(OBJS) $(LINKER_SCRIPT)
 	$(LD) $(OBJS) $(LDFLAGS) -o $@
+	@echo Build success
 
 $(OBJDIR)/%o: %c
 	$(CC) $(CFLAGS) $< -o $@

@@ -47,9 +47,14 @@
 #define SW2     "30"
 #define SW3     "22"
 
-#define PWM_NS_MULT 10000
+#define PWM_INC 10
+#define PWM_NS_MULT 100000
 #define MAX(x, y) ((x>y)?x:y)
-#define SET_TIM(x, y) x.it_interval.tv_sec=1; x.it_interval.tv_nsec=y;x.it_value.tv_sec=1; x.it_value.tv_nsec=y;
+#define SET_TIM(x, y) {\
+ 	x.it_interval.tv_sec=0;\
+  	x.it_interval.tv_nsec=y;\
+  	x.it_value.tv_sec=0;\
+   	x.it_value.tv_nsec=y;}
 
 static int open_pwm()
 {
@@ -142,38 +147,37 @@ int main()
 	int sw2_fd = open_switch(SW2);
 	int sw3_fd = open_switch(SW3);
 
-	long duty = 50;
+	int duty_set = 50;
+	int duty_current = 0;
 
 	// Set the driver
 
 	// Open PWM output
  	int pwm = open_pwm();
-	write (pwm, "1", sizeof("1"));
+	write(pwm, "1", sizeof("1"));
 
 
 	// Create the timer
 	int tim_fd = timerfd_create(CLOCK_REALTIME, 0);
-	struct itimerspec hi, low;
-	SET_TIM(hi, duty * PWM_NS_MULT);
-	SET_TIM(low, (100-duty) * PWM_NS_MULT);
-	timerfd_settime(tim_fd, 0, &hi, NULL);
+	struct itimerspec tim_dur;
+	SET_TIM(tim_dur, 100/PWM_INC * PWM_NS_MULT);
+	timerfd_settime(tim_fd, 0, &tim_dur, NULL);
 
 	int max_fd = MAX(sw1_fd, sw2_fd);
 	max_fd = MAX(max_fd, sw3_fd);
 	max_fd = MAX(max_fd, tim_fd);
 
-
-	int k = 0;
 	while(1) {
-		fd_set fd_int;
-		FD_ZERO(&fd_int);
-		FD_SET(tim_fd, &fd_int);
-		//FD_SET(sw1_fd, &fd_int);
-		//FD_SET(sw2_fd, &fd_int);
-		//FD_SET(sw3_fd, &fd_int);
+		fd_set fds_sw, fds_tim;
+		FD_ZERO(&fds_sw);
+		FD_ZERO(&fds_tim);
+		FD_SET(tim_fd, &fds_tim);
+		FD_SET(sw1_fd, &fds_sw);
+		FD_SET(sw2_fd, &fds_sw);
+		FD_SET(sw3_fd, &fds_sw);
 
-		// Look if some intput has a change or if the timer overflows
-		int ret = select(max_fd+1, &fd_int, NULL, NULL, NULL);
+		// Look  if the timer thas overflows
+		int ret = select(tim_fd+1, &fds_tim, NULL, &fds_sw, NULL);
 		// Manage errors
 		if (ret == -1)
 		{
@@ -189,36 +193,56 @@ int main()
 		else
 		{
 			// Handle timer
-			if (FD_ISSET(tim_fd, &fd_int))
+			if (FD_ISSET(tim_fd, &fds_tim))
 			{
 				read(tim_fd, dummy, 10);
-				printf("Timer!\n");
+				//printf("Timer!\n");
+
+				duty_current = (duty_current + PWM_INC) % 100;
+
+				// Toggle pin
+				if (duty_current < duty_set)
+					write(pwm, "1", sizeof("1"));
+				else
+					write(pwm, "0", sizeof("0"));
+
 			}
-			// Manage siwches
-			else if (FD_ISSET(sw1_fd, &fd_int))
+			else if (FD_ISSET(sw1_fd, &fds_sw))
 			{
+				// Make sure the select will block
 				read(sw1_fd, dummy, 10);
 				lseek(sw1_fd, 0, SEEK_SET);
-				printf("SW1\n");
-				if (duty < 100)
-					duty += 10;
+
+				// Manage duty cycle
+				if (duty_set < 100)
+					duty_set += PWM_INC;
+				printf("Duty cyle is now %d\n", duty_set);
 			}
-			else if (FD_ISSET(sw2_fd, &fd_int))
+			else if (FD_ISSET(sw2_fd, &fds_sw))
 			{
+				// Make sure the select will block
 				read(sw2_fd, dummy, 10);
 				lseek(sw2_fd, 0, SEEK_SET);
-				printf("SW2\n");
-				duty = 50;
+				
+				// Manage duty cycle
+				duty_set = 50;
+				printf("Duty cyle is now %d\n", duty_set);
 			}
-			else if (FD_ISSET(sw3_fd, &fd_int))
+			else if (FD_ISSET(sw3_fd, &fds_sw))
 			{
+				// Make sure the select will block
 				read(sw3_fd, dummy, 10);
 				lseek(sw3_fd, 0, SEEK_SET);
-				printf("SW3\n");
-				if (duty > 0)
-					duty -= 10;
+				
+				// Manage duty cycle
+				if (duty_set > 0)
+					duty_set -= PWM_INC;
+				printf("Duty cyle is now %d\n", duty_set);
 			}
-
+			else
+			{
+				printf("Unkown fd set in select\n");
+			}
 		}
 
 
