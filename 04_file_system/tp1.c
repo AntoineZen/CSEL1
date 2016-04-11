@@ -128,12 +128,18 @@ static int open_switch(char* pin)
 	// open gpio value attribute
 	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/value");
 	//printf("Opening %s\n", buffer);
+
+ 	f = open (buffer, O_RDWR);
 	if(f < 0)
 	{
 		perror("Open for reading");
 		exit(-1);
 	}
- 	f = open (buffer, O_RDWR);
+
+			// Make sure the select will block
+	read(f, buffer, 10);
+	lseek(f, 0, SEEK_SET);
+
 	return f;
 }
 
@@ -143,6 +149,8 @@ int main()
 
 	// Open the syslog
 	openlog("PWM control", LOG_PERROR, LOG_USER);
+
+	// Open the buttons
 	int sw1_fd = open_switch(SW1);
 	int sw2_fd = open_switch(SW2);
 	int sw3_fd = open_switch(SW3);
@@ -177,7 +185,7 @@ int main()
 		FD_SET(sw3_fd, &fds_sw);
 
 		// Look  if the timer thas overflows
-		int ret = select(tim_fd+1, &fds_tim, NULL, &fds_sw, NULL);
+		int ret = select(max_fd+1, &fds_tim, NULL, &fds_sw, NULL);
 		// Manage errors
 		if (ret == -1)
 		{

@@ -16,6 +16,7 @@ Contents:
    env_setup
    kernel_module
    drivers
+   file_system
    
 
 Indices and tables

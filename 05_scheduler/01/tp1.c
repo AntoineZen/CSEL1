@@ -56,6 +56,8 @@
   	x.it_value.tv_sec=0;\
    	x.it_value.tv_nsec=y;}
 
+#define FIFO_NAME "/tmp/pwm_fifo"
+
 static int open_pwm()
 {
 	// unexport pin out of sysfs (reinitialization)
@@ -128,12 +130,18 @@ static int open_switch(char* pin)
 	// open gpio value attribute
 	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/value");
 	//printf("Opening %s\n", buffer);
+
+ 	f = open (buffer, O_RDWR);
 	if(f < 0)
 	{
 		perror("Open for reading");
 		exit(-1);
 	}
- 	f = open (buffer, O_RDWR);
+
+			// Make sure the select will block
+	read(f, buffer, 10);
+	lseek(f, 0, SEEK_SET);
+
 	return f;
 }
 
@@ -143,6 +151,8 @@ int main()
 
 	// Open the syslog
 	openlog("PWM control", LOG_PERROR, LOG_USER);
+
+	// Open the buttons
 	int sw1_fd = open_switch(SW1);
 	int sw2_fd = open_switch(SW2);
 	int sw3_fd = open_switch(SW3);
@@ -163,90 +173,152 @@ int main()
 	SET_TIM(tim_dur, 100/PWM_INC * PWM_NS_MULT);
 	timerfd_settime(tim_fd, 0, &tim_dur, NULL);
 
+	// compute the maximum fd number used
 	int max_fd = MAX(sw1_fd, sw2_fd);
 	max_fd = MAX(max_fd, sw3_fd);
-	max_fd = MAX(max_fd, tim_fd);
 
-	while(1) {
-		fd_set fds_sw, fds_tim;
-		FD_ZERO(&fds_sw);
-		FD_ZERO(&fds_tim);
-		FD_SET(tim_fd, &fds_tim);
-		FD_SET(sw1_fd, &fds_sw);
-		FD_SET(sw2_fd, &fds_sw);
-		FD_SET(sw3_fd, &fds_sw);
+	fd_set fds_sw, fds_tim;
 
-		// Look  if the timer thas overflows
-		int ret = select(tim_fd+1, &fds_tim, NULL, &fds_sw, NULL);
-		// Manage errors
-		if (ret == -1)
+	int ret = mkfifo(FIFO_NAME, 0666);
+	if (ret)
+	{
+		perror("mkfifo()\n");
+	}
+
+	int child_fd = fork();
+	if (child_fd > 0)
+	{
+		int fifo_fd = open(FIFO_NAME, O_WRONLY);
+		// parent process, will handle the button, passing the duty to the child
+		while(1) 
 		{
-			perror("Selec()");
-			exit(-1);
-		}
-		else if (ret == 0)
-		{
-			perror("Timeout should not occure!");
-			exit(-1);
-		}
-		// Normal case
-		else
-		{
-			// Handle timer
-			if (FD_ISSET(tim_fd, &fds_tim))
-			{
-				read(tim_fd, dummy, 10);
-				//printf("Timer!\n");
+			FD_ZERO(&fds_sw);
+			FD_SET(sw1_fd, &fds_sw);
+			FD_SET(sw2_fd, &fds_sw);
+			FD_SET(sw3_fd, &fds_sw);
 
-				duty_current = (duty_current + PWM_INC) % 100;
-
-				// Toggle pin
-				if (duty_current < duty_set)
-					write(pwm, "1", sizeof("1"));
-				else
-					write(pwm, "0", sizeof("0"));
-
-			}
-			else if (FD_ISSET(sw1_fd, &fds_sw))
+			// Look  if the timer thas overflows
+			ret = select(max_fd+1, NULL, NULL, &fds_sw, NULL);
+			// Manage errors
+			if (ret == -1)
 			{
-				// Make sure the select will block
-				read(sw1_fd, dummy, 10);
-				lseek(sw1_fd, 0, SEEK_SET);
-
-				// Manage duty cycle
-				if (duty_set < 100)
-					duty_set += PWM_INC;
-				printf("Duty cyle is now %d\n", duty_set);
+				perror("Selec()");
+				exit(-1);
 			}
-			else if (FD_ISSET(sw2_fd, &fds_sw))
+			else if (ret == 0)
 			{
-				// Make sure the select will block
-				read(sw2_fd, dummy, 10);
-				lseek(sw2_fd, 0, SEEK_SET);
-				
-				// Manage duty cycle
-				duty_set = 50;
-				printf("Duty cyle is now %d\n", duty_set);
+				perror("Timeout should not occure!");
+				exit(-1);
 			}
-			else if (FD_ISSET(sw3_fd, &fds_sw))
-			{
-				// Make sure the select will block
-				read(sw3_fd, dummy, 10);
-				lseek(sw3_fd, 0, SEEK_SET);
-				
-				// Manage duty cycle
-				if (duty_set > 0)
-					duty_set -= PWM_INC;
-				printf("Duty cyle is now %d\n", duty_set);
-			}
+			// Normal case
 			else
 			{
-				printf("Unkown fd set in select\n");
+				// Handle timer
+				if (FD_ISSET(sw1_fd, &fds_sw))
+				{
+					// Make sure the select will block
+					read(sw1_fd, dummy, 10);
+					lseek(sw1_fd, 0, SEEK_SET);
+
+					// Manage duty cycle
+					if (duty_set < 100)
+						duty_set += PWM_INC;
+					printf("Duty cyle is now %d\n", duty_set);
+				}
+				else if (FD_ISSET(sw2_fd, &fds_sw))
+				{
+					// Make sure the select will block
+					read(sw2_fd, dummy, 10);
+					lseek(sw2_fd, 0, SEEK_SET);
+					
+					// Manage duty cycle
+					duty_set = 50;
+					printf("Duty cyle is now %d\n", duty_set);
+				}
+				else if (FD_ISSET(sw3_fd, &fds_sw))
+				{
+					// Make sure the select will block
+					read(sw3_fd, dummy, 10);
+					lseek(sw3_fd, 0, SEEK_SET);
+					
+					// Manage duty cycle
+					if (duty_set > 0)
+						duty_set -= PWM_INC;
+					printf("Duty cyle is now %d\n", duty_set);
+				}
+				else
+				{
+					printf("Unkown fd set in select\n");
+				}
+
+				// Send new dutty to child process
+				ret = write(fifo_fd, &duty_set, sizeof(duty_set));
+				if(ret < 0)
+				{
+					perror("write()\n");
+				}
 			}
 		}
-
-
+		close(fifo_fd);
 	}
+
+	else
+	{
+		int fifo_fd = open(FIFO_NAME, O_RDONLY);
+		// child process, will handle the fan
+		while(1) 
+		{
+
+			FD_ZERO(&fds_tim);
+			FD_SET(tim_fd, &fds_tim);
+			FD_SET(fifo_fd, &fds_tim);
+
+			// Look  if the timer thas overflows
+			ret = select(MAX(tim_fd, fifo_fd)+1, &fds_tim, NULL, NULL, NULL);
+			// Manage errors
+			if (ret == -1)
+			{
+				perror("Selec()");
+				exit(-1);
+			}
+			else if (ret == 0)
+			{
+				perror("Timeout should not occure!");
+				exit(-1);
+			}
+			// Normal case
+			else
+			{
+				// Handle timer
+				if (FD_ISSET(tim_fd, &fds_tim))
+				{
+					read(tim_fd, dummy, 10);
+					//printf("Timer!\n");
+
+					duty_current = (duty_current + PWM_INC) % 100;
+
+					// Toggle pin
+					if (duty_current < duty_set)
+						write(pwm, "1", sizeof("1"));
+					else
+						write(pwm, "0", sizeof("0"));
+
+				}
+				else if (FD_ISSET(fifo_fd, &fds_tim))
+				{
+					ret = read(fifo_fd, &duty_set, sizeof(duty_set));
+					printf("Got new duty %d\n", duty_set);
+					if(ret < 0)
+					{
+						perror("read()\n");
+					}
+				}
+			}
+		}
+		close(fifo_fd);
+	}
+
+	
 
 	close(tim_fd);
 	close(pwm);
