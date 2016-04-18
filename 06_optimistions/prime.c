@@ -14,10 +14,36 @@
 #define MIN_NUM 1
 #define MAX_NUM 320000
 
+void itoa(long value, char* result) { 
+
+    char* ptr = result, *ptr1 = result, tmp_char; 
+    int tmp_value; 
+    do 
+    { 
+        tmp_value = value; 
+        value /= 10; 
+        *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz"[35 + (tmp_value - value * 10)]; 
+    } 
+    while ( value );     
+
+    if (tmp_value < 0) *ptr++ = '-';   // Apply negative sign 
+    *ptr-- = '\0'; 
+
+    while(ptr1 < ptr) 
+    { 
+        tmp_char = *ptr; 
+        *ptr--= *ptr1; 
+        *ptr1++ = tmp_char; 
+    } 
+} 
+
 int checkNumbers(long long min, long long max, FILE* fd){
 	int  num, div;   
     char prime;
     int prime_count = 0;    
+
+    char buffer[32];
+
 	for(num = min; num < max; num++) {
 		prime = 1; 
     	for(div = 2; div < num/2; div++) {
@@ -30,7 +56,12 @@ int checkNumbers(long long min, long long max, FILE* fd){
 		if (prime==1) 
         {
             prime_count++;
-            fprintf(fd, "%d\n", num); 
+            //fprintf(fd, "%d\n", num); 
+            itoa(num, buffer);
+            int len = strlen(buffer);
+            buffer[len] = '\n';
+            buffer[len+1] = '\0';
+            fwrite(buffer, 1,  len+1, fd);
         }
 	}
     return prime_count;
