@@ -2,15 +2,23 @@ EXE=prime_opt
 SRCS=$(wildcard *.c) 
 
 
+TARGET := arm
 TOOLCHAIN_PATH=~/workspace/xu3/buildroot/output/host/usr/bin/
-TOOLCHAIN=$(TOOLCHAIN_PATH)arm-linux-gnueabihf-
-#TOOLCHAIN:=/usr/bin/
+ifeq ($(TARGET), arm)
+	TOOLCHAIN=$(TOOLCHAIN_PATH)arm-linux-gnueabihf-
+else
+	TOOLCHAIN=/usr/bin/
+endif
+
 CC=$(TOOLCHAIN)gcc
 LD=$(TOOLCHAIN)gcc
 AR=$(TOOLCHAIN)ar
 STRIP=$(TOOLCHAIN)strip
-CFLAGS+=-pedantic -Wall -Wextra -g -c -mcpu=cortex-a15.cortex-a7 -O2 -MD -std=gnu11
-#CFLAGS+=-pedantic -Wall -Wextra -g -c -O2 -MD -std=gnu11 -pthread
+ifeq ($(TARGET), arm)
+	CFLAGS+=-pedantic -Wall -Wextra -g -c -mcpu=cortex-a15.cortex-a7 -O2 -MD -std=gnu11
+else
+	CFLAGS+=-pedantic -Wall -Wextra -g -c -O2 -MD -std=gnu11 -pthread
+endif
 LDFLAGS=-pthread
 OBJDIR=.obj/odroid
 EXEC=$(EXE)
