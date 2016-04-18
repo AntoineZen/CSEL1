@@ -10,7 +10,8 @@ LD=$(TOOLCHAIN)gcc
 AR=$(TOOLCHAIN)ar
 STRIP=$(TOOLCHAIN)strip
 #CFLAGS+=-pedantic -Wall -Wextra -g -c -mcpu=cortex-a15.cortex-a7 -O0 -MD -std=gnu11 
-CFLAGS+=-pedantic -Wall -Wextra -g -c -O0 -MD -std=gnu11 
+CFLAGS+=-pedantic -Wall -Wextra -g -c -O2 -MD -std=gnu11 -pthread
+LDFLAGS=-pthread
 OBJDIR=.obj/odroid
 EXEC=$(EXE)
 

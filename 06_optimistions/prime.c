@@ -1,11 +1,13 @@
 /* Prim1.c: simple program to calculate prime numbers */
-#include <stdio.h> 
 #include <time.h>
-#include <stdlib.h>
+
 #include <math.h>
 #include <pthread.h>
 #include <unistd.h>
+
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 /*Numbers to test */
 //#define MIN_NUM 1000000
@@ -67,17 +69,55 @@ int checkNumbers(long long min, long long max, FILE* fd){
     return prime_count;
 }
 
+
+typedef struct 
+{
+    int n;
+   int min;
+   int max;
+   FILE* fd;
+   int ret;
+}
+prime_task_args;
+
+void* prime_task(void* param)
+{
+
+    prime_task_args* args = (prime_task_args*)param;
+
+    printf("This is thread %d computing from %i to %i\n", args->n, args->min, args->max);
+    args->ret =  checkNumbers(args->min, args->max, args->fd);
+    return param;
+}
+
 int main()
 {
+    pthread_t threads[32];
+    prime_task_args task_args[32];
+
+
     struct timespec rt1, rt2;
     long long time1;
 
+    int n_cpu = sysconf(_SC_NPROCESSORS_ONLN);
 
-    printf("There is %li cores\n", sysconf(_SC_NPROCESSORS_ONLN));
+
+    printf("There is %i cores\n", n_cpu);
 
  
     FILE* f = fopen("prime_num.txt", "w");
-    clock_gettime(CLOCK_REALTIME, &rt1);  
+    clock_gettime(CLOCK_REALTIME, &rt1); 
+
+    int slice = (MAX_NUM - MIN_NUM) / n_cpu; 
+
+    for(int i=0; i < n_cpu; i++)
+    {
+        task_args[i].n = i;
+        task_args[i].min = MIN_NUM + i * slice;
+        task_args[i].max = MIN_NUM + (i+1) * slice -1;
+        task_args[i].fd = f;
+        pthread_create(threads+i, NULL, prime_task, &task_args[i]);
+    }
     checkNumbers(MIN_NUM, MAX_NUM, f); 
     clock_gettime(CLOCK_REALTIME, &rt2);  
     time1 = (long long int)(rt2.tv_sec - rt1.tv_sec)*1000000000 + (rt2.tv_nsec - rt1.tv_nsec);
