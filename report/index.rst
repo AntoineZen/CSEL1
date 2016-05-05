@@ -17,6 +17,9 @@ Contents:
    kernel_module
    drivers
    file_system
+   scheduler
+   optimizations
+
    
 
 Indices and tables
