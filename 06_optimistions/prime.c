@@ -140,6 +140,11 @@ int main()
     printf("There is %i cores\n", n_cpu);
 
     FILE* f = fopen("prime_num.txt", "w");
+    if( f == NULL)
+    {
+        printf("Unable to open \"prime_num.txt\" !\n");
+        return -1;
+    }
     clock_gettime(CLOCK_REALTIME, &rt1); 
 
     int slice = (MAX_NUM+1 - MIN_NUM) / n_cpu; 
