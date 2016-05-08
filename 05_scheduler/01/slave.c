@@ -42,10 +42,7 @@
 #define GPIO_UNEXPORT	"/sys/class/gpio/unexport"
 #define GPIO_PWM	"/sys/class/gpio/gpio203"
 #define PWM		"203"
-#define SW_PREFIX	"/sys/class/gpio/gpio"
-#define SW1     "29"
-#define SW2     "30"
-#define SW3     "22"
+
 
 #define PWM_INC 10
 #define PWM_NS_MULT 100000
@@ -80,70 +77,6 @@ static int open_pwm()
 	return f;
 }
 
-static int open_switch(char* pin)
-{
-	char buffer[32];
-		// unexport pin out of sysfs (reinitialization)
-	int f = open (GPIO_UNEXPORT, O_WRONLY);
-	if(f < 0)
-	{
-		perror("unexport");
-		exit(-1);
-	}
-	write (f, pin, strlen(pin));
-	close (f);
-
-	// export pin to sysfs
-	f = open (GPIO_EXPORT, O_WRONLY);
-	if(f < 0)
-	{
-		perror("export");
-		exit(-1);
-	}
-	write (f, pin, strlen(pin));
-	close (f);	
-
-	// config pin as output
-	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/direction");
-	//printf("writing to %s\n", buffer);
-	f = open (buffer, O_WRONLY);
-	if(f < 0)
-	{
-		perror("Setting pin as output");
-		exit(-1);
-	}
-	write (f, "in", strlen("in"));
-	close (f);
-
-	// Config pin for rising edge event
-	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/edge");
-	//printf("writing to %s\n", buffer);
-	f = open (buffer, O_WRONLY);
-	write (f, "rising", strlen("rising"));
-	if(f < 0)
-	{
-		perror("event");
-		exit(-1);
-	}
-	close (f);
-
-	// open gpio value attribute
-	sprintf(buffer, "%s%s%s", SW_PREFIX, pin, "/value");
-	//printf("Opening %s\n", buffer);
-
- 	f = open (buffer, O_RDWR);
-	if(f < 0)
-	{
-		perror("Open for reading");
-		exit(-1);
-	}
-
-			// Make sure the select will block
-	read(f, buffer, 10);
-	lseek(f, 0, SEEK_SET);
-
-	return f;
-}
 
 int main() 
 {
@@ -152,10 +85,8 @@ int main()
 	// Open the syslog
 	openlog("PWM control", LOG_PERROR, LOG_USER);
 
-	// Open the buttons
-	int sw1_fd = open_switch(SW1);
-	int sw2_fd = open_switch(SW2);
-	int sw3_fd = open_switch(SW3);
+	printf("Slave starting\n");
+
 
 	int duty_set = 50;
 	int duty_current = 0;
@@ -166,18 +97,13 @@ int main()
  	int pwm = open_pwm();
 	write(pwm, "1", sizeof("1"));
 
-
 	// Create the timer
 	int tim_fd = timerfd_create(CLOCK_REALTIME, 0);
 	struct itimerspec tim_dur;
 	SET_TIM(tim_dur, 100/PWM_INC * PWM_NS_MULT);
 	timerfd_settime(tim_fd, 0, &tim_dur, NULL);
 
-	// compute the maximum fd number used
-	int max_fd = MAX(sw1_fd, sw2_fd);
-	max_fd = MAX(max_fd, sw3_fd);
-
-	fd_set fds_sw, fds_tim;
+	fd_set fds_tim;
 
 	int ret = mkfifo(FIFO_NAME, 0666);
 	if (ret)
@@ -185,147 +111,61 @@ int main()
 		perror("mkfifo()\n");
 	}
 
-	int child_fd = fork();
-	if (child_fd > 0)
+	
+	int fifo_fd = open(FIFO_NAME, O_RDONLY);
+	// child process, will handle the fan
+	while(1) 
 	{
-		int fifo_fd = open(FIFO_NAME, O_WRONLY);
-		// parent process, will handle the button, passing the duty to the child
-		while(1) 
+
+		FD_ZERO(&fds_tim);
+		FD_SET(tim_fd, &fds_tim);
+		FD_SET(fifo_fd, &fds_tim);
+
+		// Look  if the timer thas overflows
+		ret = select(MAX(tim_fd, fifo_fd)+1, &fds_tim, NULL, NULL, NULL);
+		// Manage errors
+		if (ret == -1)
 		{
-			FD_ZERO(&fds_sw);
-			FD_SET(sw1_fd, &fds_sw);
-			FD_SET(sw2_fd, &fds_sw);
-			FD_SET(sw3_fd, &fds_sw);
+			perror("Selec()");
+			exit(-1);
+		}
+		else if (ret == 0)
+		{
+			perror("Timeout should not occure!");
+			exit(-1);
+		}
+		// Normal case
+		else
+		{
+			// Handle timer
+			if (FD_ISSET(tim_fd, &fds_tim))
+			{
+				read(tim_fd, dummy, 10);
+				//printf("Timer!\n");
 
-			// Look  if the timer thas overflows
-			ret = select(max_fd+1, NULL, NULL, &fds_sw, NULL);
-			// Manage errors
-			if (ret == -1)
-			{
-				perror("Selec()");
-				exit(-1);
-			}
-			else if (ret == 0)
-			{
-				perror("Timeout should not occure!");
-				exit(-1);
-			}
-			// Normal case
-			else
-			{
-				// Handle timer
-				if (FD_ISSET(sw1_fd, &fds_sw))
-				{
-					// Make sure the select will block
-					read(sw1_fd, dummy, 10);
-					lseek(sw1_fd, 0, SEEK_SET);
+				duty_current = (duty_current + PWM_INC) % 100;
 
-					// Manage duty cycle
-					if (duty_set < 100)
-						duty_set += PWM_INC;
-					printf("Duty cyle is now %d\n", duty_set);
-				}
-				else if (FD_ISSET(sw2_fd, &fds_sw))
-				{
-					// Make sure the select will block
-					read(sw2_fd, dummy, 10);
-					lseek(sw2_fd, 0, SEEK_SET);
-					
-					// Manage duty cycle
-					duty_set = 50;
-					printf("Duty cyle is now %d\n", duty_set);
-				}
-				else if (FD_ISSET(sw3_fd, &fds_sw))
-				{
-					// Make sure the select will block
-					read(sw3_fd, dummy, 10);
-					lseek(sw3_fd, 0, SEEK_SET);
-					
-					// Manage duty cycle
-					if (duty_set > 0)
-						duty_set -= PWM_INC;
-					printf("Duty cyle is now %d\n", duty_set);
-				}
+				// Toggle pin
+				if (duty_current < duty_set)
+					write(pwm, "1", sizeof("1"));
 				else
-				{
-					printf("Unkown fd set in select\n");
-				}
+					write(pwm, "0", sizeof("0"));
 
-				// Send new dutty to child process
-				ret = write(fifo_fd, &duty_set, sizeof(duty_set));
+			}
+			else if (FD_ISSET(fifo_fd, &fds_tim))
+			{
+				ret = read(fifo_fd, &duty_set, sizeof(duty_set));
+				printf("Slave:Got new duty %d\n", duty_set);
 				if(ret < 0)
 				{
-					perror("write()\n");
+					perror("read()\n");
 				}
 			}
 		}
-		close(fifo_fd);
 	}
-
-	else
-	{
-		int fifo_fd = open(FIFO_NAME, O_RDONLY);
-		// child process, will handle the fan
-		while(1) 
-		{
-
-			FD_ZERO(&fds_tim);
-			FD_SET(tim_fd, &fds_tim);
-			FD_SET(fifo_fd, &fds_tim);
-
-			// Look  if the timer thas overflows
-			ret = select(MAX(tim_fd, fifo_fd)+1, &fds_tim, NULL, NULL, NULL);
-			// Manage errors
-			if (ret == -1)
-			{
-				perror("Selec()");
-				exit(-1);
-			}
-			else if (ret == 0)
-			{
-				perror("Timeout should not occure!");
-				exit(-1);
-			}
-			// Normal case
-			else
-			{
-				// Handle timer
-				if (FD_ISSET(tim_fd, &fds_tim))
-				{
-					read(tim_fd, dummy, 10);
-					//printf("Timer!\n");
-
-					duty_current = (duty_current + PWM_INC) % 100;
-
-					// Toggle pin
-					if (duty_current < duty_set)
-						write(pwm, "1", sizeof("1"));
-					else
-						write(pwm, "0", sizeof("0"));
-
-				}
-				else if (FD_ISSET(fifo_fd, &fds_tim))
-				{
-					ret = read(fifo_fd, &duty_set, sizeof(duty_set));
-					printf("Got new duty %d\n", duty_set);
-					if(ret < 0)
-					{
-						perror("read()\n");
-					}
-				}
-			}
-		}
-		close(fifo_fd);
-	}
-
-	
-
+	close(fifo_fd);
 	close(tim_fd);
 	close(pwm);
-	close(sw3_fd);
-	close(sw2_fd);
-	close(sw1_fd);
-
 	closelog();
 
 	return 0;

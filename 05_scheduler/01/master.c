@@ -40,45 +40,19 @@
  */
 #define GPIO_EXPORT	"/sys/class/gpio/export"
 #define GPIO_UNEXPORT	"/sys/class/gpio/unexport"
-#define GPIO_PWM	"/sys/class/gpio/gpio203"
-#define PWM		"203"
+
 #define SW_PREFIX	"/sys/class/gpio/gpio"
 #define SW1     "29"
 #define SW2     "30"
 #define SW3     "22"
 
 #define PWM_INC 10
-#define PWM_NS_MULT 100000
-#define MAX(x, y) ((x>y)?x:y)
-#define SET_TIM(x, y) {\
- 	x.it_interval.tv_sec=0;\
-  	x.it_interval.tv_nsec=y;\
-  	x.it_value.tv_sec=0;\
-   	x.it_value.tv_nsec=y;}
+
+ #define MAX(x, y) ((x>y)?x:y)
+
 
 #define FIFO_NAME "/tmp/pwm_fifo"
 
-static int open_pwm()
-{
-	// unexport pin out of sysfs (reinitialization)
-	int f = open (GPIO_UNEXPORT, O_WRONLY);
-	write (f, PWM, strlen(PWM));
-	close (f);
-
-	// export pin to sysfs
-	f = open (GPIO_EXPORT, O_WRONLY);
-	write (f, PWM, strlen(PWM));
-	close (f);	
-
-	// config pin
-	f = open (GPIO_PWM "/direction", O_WRONLY);
-	write (f, "out", 3);
-	close (f);
-
-	// open gpio value attribute
- 	f = open (GPIO_PWM "/value", O_RDWR);
-	return f;
-}
 
 static int open_switch(char* pin)
 {
@@ -158,26 +132,12 @@ int main()
 	int sw3_fd = open_switch(SW3);
 
 	int duty_set = 50;
-	int duty_current = 0;
-
-	// Set the driver
-
-	// Open PWM output
- 	int pwm = open_pwm();
-	write(pwm, "1", sizeof("1"));
-
-
-	// Create the timer
-	int tim_fd = timerfd_create(CLOCK_REALTIME, 0);
-	struct itimerspec tim_dur;
-	SET_TIM(tim_dur, 100/PWM_INC * PWM_NS_MULT);
-	timerfd_settime(tim_fd, 0, &tim_dur, NULL);
 
 	// compute the maximum fd number used
 	int max_fd = MAX(sw1_fd, sw2_fd);
 	max_fd = MAX(max_fd, sw3_fd);
 
-	fd_set fds_sw, fds_tim;
+	fd_set fds_sw;
 
 	int ret = mkfifo(FIFO_NAME, 0666);
 	if (ret)
@@ -264,64 +224,14 @@ int main()
 
 	else
 	{
-		int fifo_fd = open(FIFO_NAME, O_RDONLY);
-		// child process, will handle the fan
-		while(1) 
+		// Call the slave process that controls the fan
+		ret = execlp("./pwm_slave", "pwm_slave", NULL);
+		if(ret > 0)
 		{
-
-			FD_ZERO(&fds_tim);
-			FD_SET(tim_fd, &fds_tim);
-			FD_SET(fifo_fd, &fds_tim);
-
-			// Look  if the timer thas overflows
-			ret = select(MAX(tim_fd, fifo_fd)+1, &fds_tim, NULL, NULL, NULL);
-			// Manage errors
-			if (ret == -1)
-			{
-				perror("Selec()");
-				exit(-1);
-			}
-			else if (ret == 0)
-			{
-				perror("Timeout should not occure!");
-				exit(-1);
-			}
-			// Normal case
-			else
-			{
-				// Handle timer
-				if (FD_ISSET(tim_fd, &fds_tim))
-				{
-					read(tim_fd, dummy, 10);
-					//printf("Timer!\n");
-
-					duty_current = (duty_current + PWM_INC) % 100;
-
-					// Toggle pin
-					if (duty_current < duty_set)
-						write(pwm, "1", sizeof("1"));
-					else
-						write(pwm, "0", sizeof("0"));
-
-				}
-				else if (FD_ISSET(fifo_fd, &fds_tim))
-				{
-					ret = read(fifo_fd, &duty_set, sizeof(duty_set));
-					printf("Got new duty %d\n", duty_set);
-					if(ret < 0)
-					{
-						perror("read()\n");
-					}
-				}
-			}
+			perror("execlp()\n");
 		}
-		close(fifo_fd);
 	}
 
-	
-
-	close(tim_fd);
-	close(pwm);
 	close(sw3_fd);
 	close(sw2_fd);
 	close(sw1_fd);
