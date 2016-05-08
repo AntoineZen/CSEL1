@@ -4,3 +4,5 @@ _build*
 *.project*
 *.metadata*
 *.cproject*
+*.obj
+06_optimistions/prime_num.txt
