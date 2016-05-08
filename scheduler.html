@@ -1,0 +1,966 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Schedulers &mdash; CSEL1 0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="CSEL1 0.0 documentation" href="index.html"/>
+        <link rel="next" title="Optimizations" href="optimizations.html"/>
+        <link rel="prev" title="File Systems" href="file_system.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CSEL1
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="env_setup.html">Environement setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kernel_module.html">Kernel Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File Systems</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Schedulers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#mulit-process-application">1. Mulit-process application</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#master-process">Master process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#slave-process">Slave process</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#clock-gettime-resolution">2. clock_gettime() resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prime-number-computation-time">3. Prime number computation time</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#assigning-process-to-cores">4. Assigning Process to cores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#condition-of-execution">5. Condition of execution</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optimizations.html">Optimizations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">CSEL1</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Schedulers</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/scheduler.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="schedulers">
+<h1>Schedulers<a class="headerlink" href="#schedulers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="mulit-process-application">
+<h2>1. Mulit-process application<a class="headerlink" href="#mulit-process-application" title="Permalink to this headline">¶</a></h2>
+<p>In this task, we modify the application made in the last lab in order to split it into two process.</p>
+<p>Each process will have its own executable. So each process have ist own source file.The fist process, called <em>pwm_master</em> will read the button add pass the duty cycle selected to the second one using a named pipe. The second process, called <em>pwm_slave</em> will read from the named pipe and manage the GPIO output to create the PWM signal.</p>
+<p>The first process will fork. The forked process (children) will just make a call to
+create the second process by calling <code class="docutils literal"><span class="pre">execlp()</span></code> as shown bellow:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">child_fd</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">child_fd</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="c1">// Master process code (parent)</span>
+        <span class="p">...</span>
+<span class="p">}</span>
+<span class="k">else</span>
+<span class="p">{</span>
+        <span class="c1">// Forked (child) code</span>
+        <span class="c1">// Call the slave process that controls the fan</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">execlp</span><span class="p">(</span><span class="s">&quot;./pwm_slave&quot;</span><span class="p">,</span> <span class="s">&quot;pwm_slave&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ret</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="n">perror</span><span class="p">(</span><span class="s">&quot;execlp()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Both process tries to create the named pipe if it not exist:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">mkfifo</span><span class="p">(</span><span class="n">FIFO_NAME</span><span class="p">,</span> <span class="mo">0666</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">&quot;mkfifo()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The master (parent) process then open it for writing:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">child_fd</span> <span class="o">=</span> <span class="n">fork</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">child_fd</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="kt">int</span> <span class="n">fifo_fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="n">FIFO_NAME</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+        <span class="c1">// parent process, will handle the button, passing the duty to the child</span>
+        <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="p">...</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>While the slave (children) process open it for reading:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">fifo_fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="n">FIFO_NAME</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+<span class="c1">// child process, will handle the fan</span>
+<span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Note</strong> that the slave process can use <code class="docutils literal"><span class="pre">select()</span></code> to wait (block) on the named pipe for new data to come. Named pipe can be used like files, but are not written to disk.</p>
+<div class="section" id="master-process">
+<h3>Master process<a class="headerlink" href="#master-process" title="Permalink to this headline">¶</a></h3>
+<p>Here after is the whole code of the master process:</p>
+<div class="highlight-c"><div class="highlight"><pre>/**
+ * Copyright 2015 University of Applied Sciences Western Switzerland / Fribourg
+ * 
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ * Project:	HEIA-FR / HES-SO MSE - MA-CSEL1 Laboratory
+ *
+ * Abstract: 	System programming -  file system
+ *
+ * Purpose:	ODROID-XU3 Lite silly fan control system
+ *
+ * Author:	Wolfram Luithardt
+ * Date:	30.03.2016
+ */
+#include &lt;sys/types.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;sys/timerfd.h&gt;
+#include &lt;sys/select.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;time.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;syslog.h&gt;
+
+/*
+ * pwm0 - gpb2.0 - 203
+ */
+#define GPIO_EXPORT	&quot;/sys/class/gpio/export&quot;
+#define GPIO_UNEXPORT	&quot;/sys/class/gpio/unexport&quot;
+
+#define SW_PREFIX	&quot;/sys/class/gpio/gpio&quot;
+#define SW1     &quot;29&quot;
+#define SW2     &quot;30&quot;
+#define SW3     &quot;22&quot;
+
+#define PWM_INC 10
+
+ #define MAX(x, y) ((x&gt;y)?x:y)
+
+
+#define FIFO_NAME &quot;/tmp/pwm_fifo&quot;
+
+
+static int open_switch(char* pin)
+{
+	char buffer[32];
+		// unexport pin out of sysfs (reinitialization)
+	int f = open (GPIO_UNEXPORT, O_WRONLY);
+	if(f &lt; 0)
+	{
+		perror(&quot;unexport&quot;);
+		exit(-1);
+	}
+	write (f, pin, strlen(pin));
+	close (f);
+
+	// export pin to sysfs
+	f = open (GPIO_EXPORT, O_WRONLY);
+	if(f &lt; 0)
+	{
+		perror(&quot;export&quot;);
+		exit(-1);
+	}
+	write (f, pin, strlen(pin));
+	close (f);	
+
+	// config pin as output
+	sprintf(buffer, &quot;%s%s%s&quot;, SW_PREFIX, pin, &quot;/direction&quot;);
+	//printf(&quot;writing to %s\n&quot;, buffer);
+	f = open (buffer, O_WRONLY);
+	if(f &lt; 0)
+	{
+		perror(&quot;Setting pin as output&quot;);
+		exit(-1);
+	}
+	write (f, &quot;in&quot;, strlen(&quot;in&quot;));
+	close (f);
+
+	// Config pin for rising edge event
+	sprintf(buffer, &quot;%s%s%s&quot;, SW_PREFIX, pin, &quot;/edge&quot;);
+	//printf(&quot;writing to %s\n&quot;, buffer);
+	f = open (buffer, O_WRONLY);
+	write (f, &quot;rising&quot;, strlen(&quot;rising&quot;));
+	if(f &lt; 0)
+	{
+		perror(&quot;event&quot;);
+		exit(-1);
+	}
+	close (f);
+
+	// open gpio value attribute
+	sprintf(buffer, &quot;%s%s%s&quot;, SW_PREFIX, pin, &quot;/value&quot;);
+	//printf(&quot;Opening %s\n&quot;, buffer);
+
+ 	f = open (buffer, O_RDWR);
+	if(f &lt; 0)
+	{
+		perror(&quot;Open for reading&quot;);
+		exit(-1);
+	}
+
+			// Make sure the select will block
+	read(f, buffer, 10);
+	lseek(f, 0, SEEK_SET);
+
+	return f;
+}
+
+int main() 
+{
+	char dummy[64];
+
+	// Open the syslog
+	openlog(&quot;PWM control&quot;, LOG_PERROR, LOG_USER);
+
+	// Open the buttons
+	int sw1_fd = open_switch(SW1);
+	int sw2_fd = open_switch(SW2);
+	int sw3_fd = open_switch(SW3);
+
+	int duty_set = 50;
+
+	// compute the maximum fd number used
+	int max_fd = MAX(sw1_fd, sw2_fd);
+	max_fd = MAX(max_fd, sw3_fd);
+
+	fd_set fds_sw;
+
+	int ret = mkfifo(FIFO_NAME, 0666);
+	if (ret)
+	{
+		perror(&quot;mkfifo()\n&quot;);
+	}
+
+	int child_fd = fork();
+	if (child_fd &gt; 0)
+	{
+		int fifo_fd = open(FIFO_NAME, O_WRONLY);
+		// parent process, will handle the button, passing the duty to the child
+		while(1) 
+		{
+			FD_ZERO(&amp;fds_sw);
+			FD_SET(sw1_fd, &amp;fds_sw);
+			FD_SET(sw2_fd, &amp;fds_sw);
+			FD_SET(sw3_fd, &amp;fds_sw);
+
+			// Look  if the timer thas overflows
+			ret = select(max_fd+1, NULL, NULL, &amp;fds_sw, NULL);
+			// Manage errors
+			if (ret == -1)
+			{
+				perror(&quot;Selec()&quot;);
+				exit(-1);
+			}
+			else if (ret == 0)
+			{
+				perror(&quot;Timeout should not occure!&quot;);
+				exit(-1);
+			}
+			// Normal case
+			else
+			{
+				// Handle timer
+				if (FD_ISSET(sw1_fd, &amp;fds_sw))
+				{
+					// Make sure the select will block
+					read(sw1_fd, dummy, 10);
+					lseek(sw1_fd, 0, SEEK_SET);
+
+					// Manage duty cycle
+					if (duty_set &lt; 100)
+						duty_set += PWM_INC;
+					printf(&quot;Duty cyle is now %d\n&quot;, duty_set);
+				}
+				else if (FD_ISSET(sw2_fd, &amp;fds_sw))
+				{
+					// Make sure the select will block
+					read(sw2_fd, dummy, 10);
+					lseek(sw2_fd, 0, SEEK_SET);
+					
+					// Manage duty cycle
+					duty_set = 50;
+					printf(&quot;Duty cyle is now %d\n&quot;, duty_set);
+				}
+				else if (FD_ISSET(sw3_fd, &amp;fds_sw))
+				{
+					// Make sure the select will block
+					read(sw3_fd, dummy, 10);
+					lseek(sw3_fd, 0, SEEK_SET);
+					
+					// Manage duty cycle
+					if (duty_set &gt; 0)
+						duty_set -= PWM_INC;
+					printf(&quot;Duty cyle is now %d\n&quot;, duty_set);
+				}
+				else
+				{
+					printf(&quot;Unkown fd set in select\n&quot;);
+				}
+
+				// Send new dutty to child process
+				ret = write(fifo_fd, &amp;duty_set, sizeof(duty_set));
+				if(ret &lt; 0)
+				{
+					perror(&quot;write()\n&quot;);
+				}
+			}
+		}
+		close(fifo_fd);
+	}
+
+	else
+	{
+		// Call the slave process that controls the fan
+		ret = execlp(&quot;./pwm_slave&quot;, &quot;pwm_slave&quot;, NULL);
+		if(ret &gt; 0)
+		{
+			perror(&quot;execlp()\n&quot;);
+		}
+	}
+
+	close(sw3_fd);
+	close(sw2_fd);
+	close(sw1_fd);
+
+	closelog();
+
+	return 0;
+}
+</pre></div>
+</div>
+</div>
+<div class="section" id="slave-process">
+<h3>Slave process<a class="headerlink" href="#slave-process" title="Permalink to this headline">¶</a></h3>
+<p>Here after is the whole code of the slave process:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cm">/**</span>
+<span class="cm"> * Copyright 2015 University of Applied Sciences Western Switzerland / Fribourg</span>
+<span class="cm"> * </span>
+<span class="cm"> * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="cm"> * you may not use this file except in compliance with the License.</span>
+<span class="cm"> * You may obtain a copy of the License at</span>
+<span class="cm"> * </span>
+<span class="cm"> *     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="cm"> * </span>
+<span class="cm"> * Unless required by applicable law or agreed to in writing, software</span>
+<span class="cm"> * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="cm"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="cm"> * See the License for the specific language governing permissions and</span>
+<span class="cm"> * limitations under the License.</span>
+<span class="cm"> * </span>
+<span class="cm"> * Project:	HEIA-FR / HES-SO MSE - MA-CSEL1 Laboratory</span>
+<span class="cm"> *</span>
+<span class="cm"> * Abstract: 	System programming -  file system</span>
+<span class="cm"> *</span>
+<span class="cm"> * Purpose:	ODROID-XU3 Lite silly fan control system</span>
+<span class="cm"> *</span>
+<span class="cm"> * Author:	Wolfram Luithardt</span>
+<span class="cm"> * Date:	30.03.2016</span>
+<span class="cm"> */</span>
+<span class="cp">#include &lt;sys/types.h&gt;</span>
+<span class="cp">#include &lt;sys/stat.h&gt;</span>
+<span class="cp">#include &lt;sys/timerfd.h&gt;</span>
+<span class="cp">#include &lt;sys/select.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#include &lt;errno.h&gt;</span>
+<span class="cp">#include &lt;time.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;syslog.h&gt;</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * pwm0 - gpb2.0 - 203</span>
+<span class="cm"> */</span>
+<span class="cp">#define GPIO_EXPORT	&quot;/sys/class/gpio/export&quot;</span>
+<span class="cp">#define GPIO_UNEXPORT	&quot;/sys/class/gpio/unexport&quot;</span>
+<span class="cp">#define GPIO_PWM	&quot;/sys/class/gpio/gpio203&quot;</span>
+<span class="cp">#define PWM		&quot;203&quot;</span>
+
+
+<span class="cp">#define PWM_INC 10</span>
+<span class="cp">#define PWM_NS_MULT 100000</span>
+<span class="cp">#define MAX(x, y) ((x&gt;y)?x:y)</span>
+<span class="cp">#define SET_TIM(x, y) {\</span>
+<span class="cp"> 	x.it_interval.tv_sec=0;\</span>
+<span class="cp">  	x.it_interval.tv_nsec=y;\</span>
+<span class="cp">  	x.it_value.tv_sec=0;\</span>
+<span class="cp">   	x.it_value.tv_nsec=y;}</span>
+
+<span class="cp">#define FIFO_NAME &quot;/tmp/pwm_fifo&quot;</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">open_pwm</span><span class="p">()</span>
+<span class="p">{</span>
+	<span class="c1">// unexport pin out of sysfs (reinitialization)</span>
+	<span class="kt">int</span> <span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_UNEXPORT</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">PWM</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">PWM</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// export pin to sysfs</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_EXPORT</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">PWM</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">PWM</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>	
+
+	<span class="c1">// config pin</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_PWM</span> <span class="s">&quot;/direction&quot;</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&quot;out&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// open gpio value attribute</span>
+ 	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_PWM</span> <span class="s">&quot;/value&quot;</span><span class="p">,</span> <span class="n">O_RDWR</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">f</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> 
+<span class="p">{</span>
+	<span class="kt">char</span> <span class="n">dummy</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+	<span class="c1">// Open the syslog</span>
+	<span class="n">openlog</span><span class="p">(</span><span class="s">&quot;PWM control&quot;</span><span class="p">,</span> <span class="n">LOG_PERROR</span><span class="p">,</span> <span class="n">LOG_USER</span><span class="p">);</span>
+
+	<span class="n">printf</span><span class="p">(</span><span class="s">&quot;Slave starting</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+
+
+	<span class="kt">int</span> <span class="n">duty_set</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">duty_current</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+	<span class="c1">// Set the driver</span>
+
+	<span class="c1">// Open PWM output</span>
+ 	<span class="kt">int</span> <span class="n">pwm</span> <span class="o">=</span> <span class="n">open_pwm</span><span class="p">();</span>
+	<span class="n">write</span><span class="p">(</span><span class="n">pwm</span><span class="p">,</span> <span class="s">&quot;1&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;1&quot;</span><span class="p">));</span>
+
+	<span class="c1">// Create the timer</span>
+	<span class="kt">int</span> <span class="n">tim_fd</span> <span class="o">=</span> <span class="n">timerfd_create</span><span class="p">(</span><span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+	<span class="k">struct</span> <span class="n">itimerspec</span> <span class="n">tim_dur</span><span class="p">;</span>
+	<span class="n">SET_TIM</span><span class="p">(</span><span class="n">tim_dur</span><span class="p">,</span> <span class="mi">100</span><span class="o">/</span><span class="n">PWM_INC</span> <span class="o">*</span> <span class="n">PWM_NS_MULT</span><span class="p">);</span>
+	<span class="n">timerfd_settime</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tim_dur</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+	<span class="n">fd_set</span> <span class="n">fds_tim</span><span class="p">;</span>
+
+	<span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">mkfifo</span><span class="p">(</span><span class="n">FIFO_NAME</span><span class="p">,</span> <span class="mo">0666</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">perror</span><span class="p">(</span><span class="s">&quot;mkfifo()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+	<span class="p">}</span>
+
+	
+	<span class="kt">int</span> <span class="n">fifo_fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="n">FIFO_NAME</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+	<span class="c1">// child process, will handle the fan</span>
+	<span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> 
+	<span class="p">{</span>
+
+		<span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+		<span class="n">FD_SET</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+		<span class="n">FD_SET</span><span class="p">(</span><span class="n">fifo_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+
+		<span class="c1">// Look  if the timer thas overflows</span>
+		<span class="n">ret</span> <span class="o">=</span> <span class="n">select</span><span class="p">(</span><span class="n">MAX</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="n">fifo_fd</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+		<span class="c1">// Manage errors</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+		<span class="p">{</span>
+			<span class="n">perror</span><span class="p">(</span><span class="s">&quot;Selec()&quot;</span><span class="p">);</span>
+			<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+		<span class="p">}</span>
+		<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="p">{</span>
+			<span class="n">perror</span><span class="p">(</span><span class="s">&quot;Timeout should not occure!&quot;</span><span class="p">);</span>
+			<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+		<span class="p">}</span>
+		<span class="c1">// Normal case</span>
+		<span class="k">else</span>
+		<span class="p">{</span>
+			<span class="c1">// Handle timer</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">))</span>
+			<span class="p">{</span>
+				<span class="n">read</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="n">dummy</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+				<span class="c1">//printf(&quot;Timer!\n&quot;);</span>
+
+				<span class="n">duty_current</span> <span class="o">=</span> <span class="p">(</span><span class="n">duty_current</span> <span class="o">+</span> <span class="n">PWM_INC</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span><span class="p">;</span>
+
+				<span class="c1">// Toggle pin</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">duty_current</span> <span class="o">&lt;</span> <span class="n">duty_set</span><span class="p">)</span>
+					<span class="n">write</span><span class="p">(</span><span class="n">pwm</span><span class="p">,</span> <span class="s">&quot;1&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;1&quot;</span><span class="p">));</span>
+				<span class="k">else</span>
+					<span class="n">write</span><span class="p">(</span><span class="n">pwm</span><span class="p">,</span> <span class="s">&quot;0&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;0&quot;</span><span class="p">));</span>
+
+			<span class="p">}</span>
+			<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">fifo_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">))</span>
+			<span class="p">{</span>
+				<span class="n">ret</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">fifo_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">duty_set</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">duty_set</span><span class="p">));</span>
+				<span class="n">printf</span><span class="p">(</span><span class="s">&quot;Slave:Got new duty %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duty_set</span><span class="p">);</span>
+				<span class="k">if</span><span class="p">(</span><span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+				<span class="p">{</span>
+					<span class="n">perror</span><span class="p">(</span><span class="s">&quot;read()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">fifo_fd</span><span class="p">);</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">);</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">pwm</span><span class="p">);</span>
+	<span class="n">closelog</span><span class="p">();</span>
+
+	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="clock-gettime-resolution">
+<h2>2. clock_gettime() resolution<a class="headerlink" href="#clock-gettime-resolution" title="Permalink to this headline">¶</a></h2>
+<p>Here is the resume of the following core inside the odroid from the /proc/cpuinfo command:
+Core 0 to 3 are same and core 5 to 7 are the same to (CPU variant and CPU part no equal)</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> cat /proc/cpuinfo
+<span class="go">processor   : 0</span>
+<span class="go">model name  : ARMv7 Processor rev 3 (v7l)</span>
+<span class="go">BogoMIPS    : 48.00</span>
+<span class="go">Features    : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae</span>
+<span class="go">CPU implementer : 0x41</span>
+<span class="go">CPU architecture: 7</span>
+<span class="go">CPU variant : 0x0</span>
+<span class="go">CPU part    : 0xc07</span>
+<span class="go">CPU revision    : 3</span>
+
+
+<span class="go">processor   : 4</span>
+<span class="go">model name  : ARMv7 Processor rev 3 (v7l)</span>
+<span class="go">BogoMIPS    : 48.00</span>
+<span class="go">Features    : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae</span>
+<span class="go">CPU implementer : 0x41</span>
+<span class="go">CPU architecture: 7</span>
+<span class="go">CPU variant : 0x2</span>
+<span class="go">CPU part    : 0xc0f</span>
+<span class="go">CPU revision    : 3</span>
+
+<span class="go">Hardware    : SAMSUNG EXYNOS (Flattened Device Tree)</span>
+<span class="go">Revision    : 0000</span>
+<span class="go">Serial      : 0000000000000000</span>
+</pre></div>
+</div>
+<p>In this example I run the program on the first core of the processor only:
+The following image show the program running on the first core CPU0. This core is an ARM-cortexA7, with the following command, I can check the CPU version and type:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> cat /sys/devices/system/cpu/cpu0/uevent
+<span class="go">OF_NAME=cpu</span>
+<span class="go">OF_FULLNAME=/cpus/cpu@0</span>
+<span class="go">OF_TYPE=cpu</span>
+<span class="go">OF_COMPATIBLE_0=arm,cortex-a7</span>
+<span class="go">OF_COMPATIBLE_N=1</span>
+</pre></div>
+</div>
+<p>The following part of code help to run a program on a specific core:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">cpu_set_t</span> <span class="n">my_set</span><span class="p">;</span>        <span class="c1">// Define your cpu_set bit mask.</span>
+<span class="n">CPU_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">my_set</span><span class="p">);</span>       <span class="c1">// Initialize it all to 0, i.e. no CPUs selected.</span>
+<span class="n">CPU_SET</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">my_set</span><span class="p">);</span>     <span class="c1">// set the bit that represents core 7.</span>
+<span class="n">sched_setaffinity</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">cpu_set_t</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">my_set</span><span class="p">);</span> <span class="c1">// Set affinity of this process</span>
+</pre></div>
+</div>
+<img alt="_images/02_top_cpu0.png" src="_images/02_top_cpu0.png" />
+<p>The histogram graph below, show the resolution of the first clock around 4000ns. With a real resolution of 42ns.</p>
+<img alt="_images/02_hysto_cpu0_realtime.png" src="_images/02_hysto_cpu0_realtime.png" />
+<p>And then for the second type of CPU, I do the same test on the CPU4.
+This core is an ARM-cortexA15</p>
+<img alt="_images/02_top_cpu4.png" src="_images/02_top_cpu4.png" />
+<p>For the histogram part, I found the same resolution. With the peak at 4125</p>
+<img alt="_images/02_hysto_cpu4_realtime.png" src="_images/02_hysto_cpu4_realtime.png" />
+<p>And here is the result for the monotonic clock</p>
+<img alt="_images/02_hysto_cpu0_monotonic.png" src="_images/02_hysto_cpu0_monotonic.png" />
+<img alt="_images/02_hysto_cpu4_monotonic.png" src="_images/02_hysto_cpu4_monotonic.png" />
+<p><strong>Observations:</strong></p>
+<p>All of the previous clock resolutions are the same so I just check with the clock_getres function what the kernel says about. The result is the same resolution for all clock.
+Small test with the <code class="docutils literal"><span class="pre">clock_getres()</span></code> function :</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#include &lt;time.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span> <span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">clockid_t</span> <span class="n">types</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span> <span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="n">CLOCK_MONOTONIC</span><span class="p">,</span> <span class="n">CLOCK_PROCESS_CPUTIME_ID</span><span class="p">,</span> <span class="n">CLOCK_THREAD_CPUTIME_ID</span><span class="p">,</span> <span class="p">(</span><span class="kt">clockid_t</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">};</span>
+
+    <span class="k">struct</span> <span class="n">timespec</span> <span class="n">spec</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span> <span class="n">i</span><span class="p">;</span> <span class="n">types</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="p">(</span><span class="kt">clockid_t</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span> <span class="p">){</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">clock_getres</span><span class="p">(</span> <span class="n">types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">spec</span> <span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">)</span>
+            <span class="n">printf</span><span class="p">(</span> <span class="s">&quot;Timer %d not supported.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">types</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">);</span>
+        <span class="k">else</span>
+            <span class="n">printf</span><span class="p">(</span> <span class="s">&quot;Timer: %d, Seconds: %ld Nanos: %ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="p">.</span><span class="n">tv_sec</span><span class="p">,</span> <span class="n">spec</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>But the result is not quite well specific:</p>
+<div class="highlight-python"><div class="highlight"><pre>Timer: 0, Seconds: 0 Nanos: 1
+Timer: 1, Seconds: 0 Nanos: 1
+Timer: 2, Seconds: 0 Nanos: 1
+Timer: 3, Seconds: 0 Nanos: 1
+</pre></div>
+</div>
+</div>
+<div class="section" id="prime-number-computation-time">
+<h2>3. Prime number computation time<a class="headerlink" href="#prime-number-computation-time" title="Permalink to this headline">¶</a></h2>
+<p>This function check the time passed in the checkNumbers() functions in [ms]:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">doJob</span><span class="p">(</span><span class="kt">int</span> <span class="n">min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">struct</span> <span class="n">timespec</span> <span class="n">rt1</span><span class="p">,</span> <span class="n">rt2</span><span class="p">;</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">time1</span><span class="p">;</span>
+
+    <span class="n">clock_gettime</span><span class="p">(</span><span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rt1</span><span class="p">);</span>
+    <span class="n">checkNumbers</span><span class="p">(</span><span class="n">min</span><span class="p">,</span> <span class="n">max</span><span class="p">);</span>
+    <span class="n">clock_gettime</span><span class="p">(</span><span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rt2</span><span class="p">);</span>
+    <span class="n">time1</span> <span class="o">=</span> <span class="p">(</span><span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="p">)(</span><span class="n">rt2</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">-</span> <span class="n">rt1</span><span class="p">.</span><span class="n">tv_sec</span><span class="p">)</span><span class="o">*</span><span class="mi">1000000000</span> <span class="o">+</span> <span class="p">(</span><span class="n">rt2</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="o">-</span> <span class="n">rt1</span><span class="p">.</span><span class="n">tv_nsec</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %.3f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">max</span><span class="p">,</span> <span class="p">(</span><span class="kt">double</span><span class="p">)(</span><span class="n">time1</span><span class="p">)</span><span class="o">/</span><span class="mi">1000000</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Both line are tested with MIN_NUM = 1 and MAX_NUM = 49000. The main difference is that the blue one is made with the CPU0 and the orange, the program runs on the CPU4 (ARM-cortex A15 2GHz).</p>
+<img alt="_images/03_scheduler_vs_time.png" src="_images/03_scheduler_vs_time.png" />
+<p>In this Graph we see that the fastest clock is the realtime. I try with the realtime_coarse, but really no visible change can be saw.</p>
+</div>
+<div class="section" id="assigning-process-to-cores">
+<h2>4. Assigning Process to cores<a class="headerlink" href="#assigning-process-to-cores" title="Permalink to this headline">¶</a></h2>
+<p>The distribution of the program over the processor. I start 2 program2, linux chose to run them on core 1 and 2:</p>
+<img alt="_images/04_top_2cpu.png" src="_images/04_top_2cpu.png" />
+<p>With all the CPU used, we can reach 100 % over all the processor.</p>
+<img alt="_images/04_top_8cpu.png" src="_images/04_top_8cpu.png" />
+<p>As in the exercise 3, yes we can put a program on a single or dedicated core</p>
+</div>
+<div class="section" id="condition-of-execution">
+<h2>5. Condition of execution<a class="headerlink" href="#condition-of-execution" title="Permalink to this headline">¶</a></h2>
+<p>This part was tested using one thread for the prim value check on a dedicated core and other process running on other core.</p>
+<p>The program used to do this job can be pgrametrized:</p>
+<blockquote>
+<div><ul>
+<li><p class="first"><strong>param1</strong> nice-value from -20 to 19</p>
+</li>
+<li><dl class="first docutils">
+<dt><strong>param2</strong> scheduler type:</dt>
+<dd><p class="first last">-&gt; 1 for CLOCK_REALTIME
+-&gt; 2 for CLOCK_MONOTONIC</p>
+</dd>
+</dl>
+</li>
+<li><p class="first"><strong>param3</strong> chose specific core to run 0 to 7</p>
+</li>
+<li><p class="first"><strong>param4</strong> max number of prim value</p>
+</li>
+</ul>
+</div></blockquote>
+<p>Here is the result of some scenario:</p>
+<p>In those scenario none other process using 100% CPU are started:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Nice value set to 19, scheduler type on CLOCK_REALTIME, running on core0 and max number 10000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_REALTIME, running on core0 and max number 100000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_REALTIME, running on core4 and max number 10000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_REALTIME, running on core4 and max number 100000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_MONOTONIC, running on core0 and max number 10000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_MONOTONIC, running on core0 and max number 100000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_MONOTONIC, running on core4 and max number 10000</li>
+<li>Nice value set to 19, scheduler type on CLOCK_MONOTONIC, running on core4 and max number 100000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_REALTIME, running on core0 and max number 10000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_REALTIME, running on core0 and max number 100000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_REALTIME, running on core4 and max number 10000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_REALTIME, running on core4 and max number 100000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_MONOTONIC, running on core0 and max number 10000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_MONOTONIC, running on core0 and max number 100000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_MONOTONIC, running on core4 and max number 10000</li>
+<li>Nice value set to -20, scheduler type on CLOCK_MONOTONIC, running on core4 and max number 100000</li>
+</ol>
+</div></blockquote>
+<p>Same as above but with 4 and 8 dummy process (/dev/null) running on CPU 2-3-5 and 7 (4) and all for core for 8 process. See the following graph and table for the result and discussion.</p>
+<p>The above scenario run from a bash file that execute all the 16 scenario in a row and save the time passed to do the job:</p>
+<div class="highlight-bash"><div class="highlight"><pre> <span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 0 0 10000&quot;</span> &gt; exercice5.log
+./Exercice5 19 0 0 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 0 0 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 0 0 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 0 4 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 0 4 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 0 4 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 0 4 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 1 0 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 1 0 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 1 0 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 1 0 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 1 4 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 1 4 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 19 1 4 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 19 1 4 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 0 0 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 0 0 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 0 0 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 0 0 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 0 4 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 0 4 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 0 4 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 0 4 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 1 0 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 1 0 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 1 0 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 1 0 100000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 1 4 10000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 1 4 10000 &gt;&gt; exercice5.log
+<span class="nb">echo</span> <span class="s2">&quot;./Exercice5 -20 1 4 100000&quot;</span> &gt;&gt; exercice5.log
+./Exercice5 -20 1 4 100000 &gt;&gt; exercice5.log
+</pre></div>
+</div>
+<p>And for the code that do the job, I create a function doJob to check the prim number, this function can be running in some different thread:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">void</span><span class="o">*</span> <span class="nf">doJob</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">param</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">struct</span> <span class="n">timespec</span> <span class="n">rt1</span><span class="p">,</span> <span class="n">rt2</span><span class="p">;</span>
+    <span class="kt">long</span> <span class="kt">long</span> <span class="n">time1</span><span class="p">;</span>
+
+    <span class="n">val</span> <span class="o">*</span><span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="n">val</span><span class="o">*</span><span class="p">)</span><span class="n">param</span><span class="p">;</span>
+
+    <span class="n">clock_gettime</span><span class="p">(</span><span class="n">v</span><span class="o">-&gt;</span><span class="n">types</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rt1</span><span class="p">);</span>
+    <span class="n">checkNumbers</span><span class="p">(</span><span class="n">v</span><span class="o">-&gt;</span><span class="n">min</span><span class="p">,</span> <span class="n">v</span><span class="o">-&gt;</span><span class="n">max</span><span class="p">);</span>
+    <span class="n">clock_gettime</span><span class="p">(</span><span class="n">v</span><span class="o">-&gt;</span><span class="n">types</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rt2</span><span class="p">);</span>
+    <span class="n">time1</span> <span class="o">=</span> <span class="p">(</span><span class="kt">long</span> <span class="kt">long</span> <span class="kt">int</span><span class="p">)(</span><span class="n">rt2</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">-</span> <span class="n">rt1</span><span class="p">.</span><span class="n">tv_sec</span><span class="p">)</span><span class="o">*</span><span class="mi">1000000000</span> <span class="o">+</span> <span class="p">(</span><span class="n">rt2</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="o">-</span> <span class="n">rt1</span><span class="p">.</span><span class="n">tv_nsec</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %.3f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">v</span><span class="o">-&gt;</span><span class="kr">thread</span><span class="p">,</span> <span class="p">(</span><span class="kt">double</span><span class="p">)(</span><span class="n">time1</span><span class="p">)</span><span class="o">/</span><span class="mi">1000000</span><span class="p">);</span> <span class="c1">//ms</span>
+
+    <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This function take a val struct that hold a variable the thread id, min and max data to check prim number and the type of source time to take.</p>
+<p>And the main function that take param and configure the program to run these scenario:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">argc</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">){</span> <span class="c1">//6 with thread usage</span>
+        <span class="n">usage</span><span class="p">();</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+   <span class="p">}</span>
+
+    <span class="kt">int</span> <span class="n">vnice</span> <span class="o">=</span> <span class="n">atoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="kt">int</span> <span class="n">tscheduler</span> <span class="o">=</span> <span class="n">atoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+    <span class="kt">int</span> <span class="n">tcore</span> <span class="o">=</span> <span class="n">atoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span>
+    <span class="kt">int</span> <span class="n">mprim</span> <span class="o">=</span> <span class="n">atoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">4</span><span class="p">]);</span>
+
+    <span class="c1">//set priority, nice value</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">setpriority</span><span class="p">(</span><span class="n">PRIO_PROCESS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">vnice</span><span class="p">)</span><span class="o">==-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">//0-&gt;current process</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="kt">clockid_t</span> <span class="n">types</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span> <span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="n">CLOCK_MONOTONIC</span><span class="p">,</span> <span class="n">CLOCK_PROCESS_CPUTIME_ID</span><span class="p">,</span> <span class="n">CLOCK_THREAD_CPUTIME_ID</span><span class="p">,</span> <span class="p">(</span><span class="kt">clockid_t</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">};</span>
+
+    <span class="c1">//###### single thread Ex4 with other process</span>
+
+    <span class="kt">cpu_set_t</span> <span class="n">my_set</span><span class="p">;</span>
+
+    <span class="n">CPU_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">my_set</span><span class="p">);</span>
+    <span class="n">CPU_SET</span><span class="p">(</span><span class="n">tcore</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">my_set</span><span class="p">);</span>
+    <span class="n">sched_setaffinity</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">cpu_set_t</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">my_set</span><span class="p">);</span>   <span class="c1">//set using current core</span>
+
+    <span class="n">val</span> <span class="n">v</span><span class="p">;</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>  <span class="c1">//start from min value</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">max</span> <span class="o">=</span> <span class="n">mprim</span><span class="p">;</span>  <span class="c1">//max prim value to reach in the checkNumber function</span>
+    <span class="n">v</span><span class="p">.</span><span class="kr">thread</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>   <span class="c1">//this is useless with a single thread</span>
+    <span class="n">v</span><span class="p">.</span><span class="n">types</span> <span class="o">=</span> <span class="n">tscheduler</span><span class="p">;</span> <span class="c1">//configure for the correct scheduler type to use</span>
+
+    <span class="n">doJob</span><span class="p">(</span><span class="o">&amp;</span><span class="n">v</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This function take 4 parameters have seen before and setup the program to run those scenario.</p>
+<img alt="_images/05_hysto.png" src="_images/05_hysto.png" />
+<img alt="_images/05_table.png" src="_images/05_table.png" />
+<p><strong>Discussion:</strong></p>
+<blockquote>
+<div><ul class="simple">
+<li>From the graph, we see that the nice value does is job, because in the right side of the graph all the column are pretty much the same high in contrary at the left side.</li>
+<li>We can see in the left side some differences between 0_process (blue) and 4_process (orange) scenarios that its hardly differentiate in the right side, its due of the nice value that eliminate this effect in the right side.</li>
+<li>Running on the core4 is much faster than running on the core0 because core4 is a faster core than core0</li>
+</ul>
+</div></blockquote>
+<p><strong>Some other test could be tested:</strong></p>
+<p>Using more thread, try with fork to create a child, optimize the code using a more efficiency algorithm, try the compilation optimization,…</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="optimizations.html" class="btn btn-neutral float-right" title="Optimizations" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="file_system.html" class="btn btn-neutral" title="File Systems" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Antoine Zen-Ruffinen, Yann Maret.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

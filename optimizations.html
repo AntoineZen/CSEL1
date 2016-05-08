@@ -1,0 +1,465 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Optimizations &mdash; CSEL1 0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="CSEL1 0.0 documentation" href="index.html"/>
+        <link rel="prev" title="Schedulers" href="scheduler.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CSEL1
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="env_setup.html">Environement setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kernel_module.html">Kernel Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scheduler.html">Schedulers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Optimizations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#no-modified-version">No modified version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modified-to-write-to-file">Modified to write to file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modified-to-remplace-fprintf-by-itoa">Modified to remplace fprintf() by itoa()</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#threaded-version">Threaded Version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#changed-prime-calculation-algorithm">Changed Prime calculation algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#test-on-final-algorithm">Test on final algorithm</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">CSEL1</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Optimizations</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/optimizations.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="optimizations">
+<h1>Optimizations<a class="headerlink" href="#optimizations" title="Permalink to this headline">¶</a></h1>
+<p>In this lab, we get the source code of a program that compute the list of all prime numbers in a given range (start and stop number). This program is sub-obtimal, the goal it to apply the techniques learned in the lecture to optimize the program. For each optimization, we give the description of the change the execution time of the program and the gain in percent.</p>
+<p>The goal of the lab is to make a program that compute the prime number (by probing) between 1&#8216;000&#8216;000 and 10&#8216;000&#8216;000. On the un-modified verison, this take houres on the odroid. So to speed-up the testing and development, it was first chosen to make this computation between 1 and 320&#8216;000. The initial range, will be tested only on the final alogrithm.</p>
+<div class="section" id="no-modified-version">
+<h2>No modified version<a class="headerlink" href="#no-modified-version" title="Permalink to this headline">¶</a></h2>
+<p>This is just the program as given, but modified for the range from 1 to 320&#8216;000. When run, this program give the following output:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> /usr/workspace/prime_opt &gt; prime_list.txt
+<span class="gp">#</span> tail prime_list.txt
+<span class="go">p: 319901</span>
+<span class="go">p: 319919</span>
+<span class="go">p: 319927</span>
+<span class="go">p: 319931</span>
+<span class="go">p: 319937</span>
+<span class="go">p: 319967</span>
+<span class="go">p: 319973</span>
+<span class="go">p: 319981</span>
+<span class="go">p: 319993</span>
+<span class="go">25579.335 ms</span>
+<span class="gp">#</span>
+<span class="gp">#</span> wc -l prime_list.txt
+<span class="go">27611 prime_list.txt</span>
+</pre></div>
+</div>
+<p>This version takes 25.579 seconds to run. It has found 27610 primve number between 1 and 320&#8216;000. (last line is taken by execution time print).</p>
+</div>
+<div class="section" id="modified-to-write-to-file">
+<h2>Modified to write to file<a class="headerlink" href="#modified-to-write-to-file" title="Permalink to this headline">¶</a></h2>
+<p>This version simply writes to a file instead of the the STDOUT. It is just about opening the file in the begin of the <code class="docutils literal"><span class="pre">main()</span></code> function and colsing it at the end of it, like this:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+        <span class="p">...</span>
+
+
+    <span class="kt">FILE</span><span class="o">*</span> <span class="n">f</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="s">&quot;prime_num.txt&quot;</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="n">fclose</span><span class="p">(</span><span class="n">f</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Then in the checkNumbers() function, we remplace the printf() call by fprintf(). The file descriptor is added to parameter list:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">checkNumbers</span><span class="p">(</span><span class="kt">long</span> <span class="kt">long</span> <span class="n">min</span><span class="p">,</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">max</span><span class="p">,</span> <span class="kt">FILE</span><span class="o">*</span> <span class="n">fd</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="p">...</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">prime</span><span class="o">==</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">prime_count</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">fprintf</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">num</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>When run, this program give the following output:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> /usr/workspace/prime_opt
+<span class="go">There is 8 cores</span>
+<span class="go">25270.439 ms</span>
+<span class="gp">#</span>
+<span class="gp">#</span> wc -l prime_num.txt
+<span class="go">27610 prime_num.txt</span>
+</pre></div>
+</div>
+<p>This version takes 25.27 seconds to run. It has found 27610 primve number between 1 and 320&#8216;000.</p>
+</div>
+<div class="section" id="modified-to-remplace-fprintf-by-itoa">
+<h2>Modified to remplace fprintf() by itoa()<a class="headerlink" href="#modified-to-remplace-fprintf-by-itoa" title="Permalink to this headline">¶</a></h2>
+<p>This version removes the <code class="docutils literal"><span class="pre">fprintf()</span></code> call by <code class="docutils literal"><span class="pre">itoa()</span></code> as it is more efficient. The <code class="docutils literal"><span class="pre">printf()</span></code> call is remplaced by the following code:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">itoa</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">buffer</span><span class="p">);</span>
+<span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+<span class="n">buffer</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span>
+<span class="n">buffer</span><span class="p">[</span><span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+<span class="n">fwrite</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>  <span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">fd</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>When run, this program give the following output:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> /usr/workspace/prime_opt
+<span class="go">There is 8 cores</span>
+<span class="go">85865.354 ms</span>
+<span class="gp">#</span>
+<span class="gp">#</span> wc -l prime_num.txt
+<span class="go">27610 prime_num.txt</span>
+</pre></div>
+</div>
+<p>This version takes 27.61 seconds to run. It has found 27610 primve number between 1 and 320&#8216;000.</p>
+</div>
+<div class="section" id="threaded-version">
+<h2>Threaded Version<a class="headerlink" href="#threaded-version" title="Permalink to this headline">¶</a></h2>
+<p>This version uses thread in order to use the whole computation power of the system. It creates as many threads as they are cores on the system. On the Odroid, there is 8 cores, so 8 threads are created (this number changes dynamicaly). The work is then splited between the theads, each thread having a slice of the range to compute. At the end, all threads are joined.</p>
+<p>A run of this version gives:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> /usr/workspace/prime_opt
+<span class="go">There is 8 cores</span>
+<span class="go">This is thread 0 computing from 1 to 39999</span>
+<span class="go">This is thread 1 computing from 40000 to 79998</span>
+<span class="go">This is thread 3 computing from 119998 to 159996</span>
+<span class="go">This is thread 4 computing from 159997 to 199995</span>
+<span class="go">This is thread 2 computing from 79999 to 119997</span>
+<span class="go">This is thread 5 computing from 199996 to 239994</span>
+<span class="go">This is thread 7 computing from 279994 to 320000</span>
+<span class="go">This is thread 6 computing from 239995 to 279993</span>
+<span class="go">26044.550 ms</span>
+<span class="gp">#</span>
+<span class="gp">#</span> wc -l prime_num.txt
+<span class="go">27610 prime_num.txt</span>
+</pre></div>
+</div>
+<p>This version takes 26.044 seconds to run.</p>
+</div>
+<div class="section" id="changed-prime-calculation-algorithm">
+<h2>Changed Prime calculation algorithm<a class="headerlink" href="#changed-prime-calculation-algorithm" title="Permalink to this headline">¶</a></h2>
+<p>This version have a new optimized alogrithm to check if a number is a prime number or not. This alogrithm was found at <a class="reference external" href="https://en.wikipedia.org/wiki/Primality_test#Pseudocode">https://en.wikipedia.org/wiki/Primality_test#Pseudocode</a> and transposed to C. The code is then the following:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">is_prime</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">register</span> <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">n</span><span class="o">%</span><span class="mi">3</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">i</span><span class="o">*</span><span class="n">i</span> <span class="o">&lt;=</span> <span class="n">n</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="o">%</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">n</span><span class="o">%</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">6</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="kt">int</span> <span class="nf">checkNumbers</span><span class="p">(</span><span class="kt">int</span> <span class="n">min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">FILE</span><span class="o">*</span> <span class="n">fd</span><span class="p">){</span>
+        <span class="k">register</span> <span class="kt">int</span>  <span class="n">num</span><span class="p">;</span>
+    <span class="k">register</span> <span class="kt">int</span> <span class="n">prime_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="kt">char</span> <span class="n">buffer</span><span class="p">[</span><span class="n">BUFFER_SIZE</span><span class="p">];</span>
+    <span class="n">memset</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BUFFER_SIZE</span><span class="p">);</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">buffer_ptr</span> <span class="o">=</span> <span class="n">buffer</span><span class="p">;</span>
+
+    <span class="c1">// if min is even, skip it</span>
+    <span class="k">if</span><span class="p">(</span> <span class="p">(</span><span class="n">min</span> <span class="o">&amp;</span> <span class="mh">0x01</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">min</span> <span class="o">+=</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+        <span class="k">for</span><span class="p">(</span><span class="n">num</span> <span class="o">=</span> <span class="n">min</span><span class="p">;</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="n">max</span><span class="p">;</span> <span class="n">num</span><span class="o">+=</span><span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">is_prime</span><span class="p">(</span><span class="n">num</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="n">prime_count</span><span class="o">++</span><span class="p">;</span>
+
+            <span class="c1">//printf(&quot;%d\n&quot;, num);</span>
+            <span class="n">itoa</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">buffer_ptr</span><span class="p">);</span>
+            <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buffer_ptr</span><span class="p">);</span>
+            <span class="n">buffer_ptr</span><span class="p">[</span><span class="n">len</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span>
+            <span class="n">buffer_ptr</span><span class="p">[</span><span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+            <span class="n">buffer_ptr</span> <span class="o">+=</span> <span class="n">len</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+            <span class="c1">//fwrite(buffer,  1, len+1, fd);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">buffer_ptr</span> <span class="o">&gt;</span> <span class="n">buffer</span> <span class="o">+</span> <span class="n">BUFFER_SIZE</span> <span class="o">-</span> <span class="mi">32</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">fwrite</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">buffer_ptr</span> <span class="o">-</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">fd</span><span class="p">);</span>
+                <span class="n">memset</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BUFFER_SIZE</span><span class="p">);</span>
+                <span class="n">buffer_ptr</span> <span class="o">=</span> <span class="n">buffer</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="p">}</span>
+
+    <span class="n">fwrite</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">buffer_ptr</span> <span class="o">-</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">fd</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="n">prime_count</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>When run, this program give the following output:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> /usr/workspace/prime_opt
+<span class="go">There is 8 cores</span>
+<span class="go">This is thread 0 computing from 1 to 40000</span>
+<span class="go">This is thread 1 computing from 40001 to 80000</span>
+<span class="go">This is thread 3 computing from 120001 to 160000</span>
+<span class="go">This is thread 2 computing from 80001 to 120000</span>
+<span class="go">This is thread 4 computing from 160001 to 200000</span>
+<span class="go">This is thread 5 computing from 200001 to 240000</span>
+<span class="go">This is thread 6 computing from 240001 to 280000</span>
+<span class="go">This is thread 7 computing from 280001 to 320000</span>
+<span class="go">There is 27607 prime number between 1 and 320000.</span>
+<span class="go">23.866 ms</span>
+</pre></div>
+</div>
+<p>This version takes 0.023 seconds to run.</p>
+</div>
+<div class="section" id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
+<p>The following table give an overview of the different optimization and the gain they brings:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="59%" />
+<col width="29%" />
+<col width="13%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Version</th>
+<th class="head">Execution time</th>
+<th class="head">Gain</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>No modified</td>
+<td>25.579</td>
+<td>0%</td>
+</tr>
+<tr class="row-odd"><td>Write to file</td>
+<td>25.270</td>
+<td>1.2%</td>
+</tr>
+<tr class="row-even"><td>Remplaced fprintf() by itoa()</td>
+<td>27.610</td>
+<td>-7.9%</td>
+</tr>
+<tr class="row-odd"><td>Threaded Version</td>
+<td>26.044</td>
+<td>-1.8%</td>
+</tr>
+<tr class="row-even"><td>New Prime calculation algorithm</td>
+<td>0.0023</td>
+<td>99.9%</td>
+</tr>
+</tbody>
+</table>
+<p>This shows that the alogritm optimization is the key point to performace. Maybe, when the algorithm is optimal, then oper optimization can lead to a noticable speed-up.</p>
+</div>
+<div class="section" id="test-on-final-algorithm">
+<h2>Test on final algorithm<a class="headerlink" href="#test-on-final-algorithm" title="Permalink to this headline">¶</a></h2>
+<p>This is the program run with the initial range:</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">#</span> /usr/workspace/prime_opt
+<span class="go">There is 8 cores</span>
+<span class="go">This is thread 0 computing from 1000000 to 2124999</span>
+<span class="go">This is thread 1 computing from 2125000 to 3249999</span>
+<span class="go">This is thread 2 computing from 3250000 to 4374999</span>
+<span class="go">This is thread 4 computing from 5500000 to 6624999</span>
+<span class="go">This is thread 5 computing from 6625000 to 7749999</span>
+<span class="go">This is thread 6 computing from 7750000 to 8874999</span>
+<span class="go">This is thread 7 computing from 8875000 to 10000000</span>
+<span class="go">This is thread 3 computing from 4375000 to 5499999</span>
+<span class="go">There is 586081 prime number between 1000000 and 10000000.</span>
+<span class="go">1963.207 ms</span>
+</pre></div>
+</div>
+<p>On the initial range, the optimized version takes 1.963 seconds to run!</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="scheduler.html" class="btn btn-neutral" title="Schedulers" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Antoine Zen-Ruffinen, Yann Maret.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

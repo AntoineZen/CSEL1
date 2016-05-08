@@ -31,6 +31,7 @@
 
   
     <link rel="top" title="CSEL1 0.0 documentation" href="index.html"/>
+        <link rel="next" title="Schedulers" href="scheduler.html"/>
         <link rel="prev" title="Drivers" href="drivers.html"/> 
 
   
@@ -84,7 +85,12 @@
 <li class="toctree-l1"><a class="reference internal" href="env_setup.html">Environement setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="kernel_module.html">Kernel Modules</a></li>
 <li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">File Systems</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">File Systems</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scheduler.html">Schedulers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimizations.html">Optimizations</a></li>
 </ul>
 
             
@@ -131,6 +137,312 @@
             
   <div class="section" id="file-systems">
 <h1>File Systems<a class="headerlink" href="#file-systems" title="Permalink to this headline">¶</a></h1>
+<p>In this lab, we write an application that can very the CPU&#8217;s fan speed based on button inputs. There will be one button to speed-up the fan, one to slow it down, and the last one will reset to a speed of 50%.</p>
+<p>The wohle probram uses GPIO at input and output using the file interface provided in <code class="docutils literal"><span class="pre">/sys</span></code>. The programm will use the <code class="docutils literal"><span class="pre">select()</span></code> function to wait on an event. We will use two kind of events:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Button press</li>
+<li>Timer event.</li>
+</ul>
+</div></blockquote>
+<p>This is done in the code as follow:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">fd_set</span> <span class="n">fds_sw</span><span class="p">,</span> <span class="n">fds_tim</span><span class="p">;</span>
+<span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+<span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+<span class="n">FD_SET</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+<span class="n">FD_SET</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+<span class="n">FD_SET</span><span class="p">(</span><span class="n">sw2_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+<span class="n">FD_SET</span><span class="p">(</span><span class="n">sw3_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+
+<span class="c1">// Look  if the timer thas overflows</span>
+<span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">select</span><span class="p">(</span><span class="n">max_fd</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Note that two different <code class="docutils literal"><span class="pre">fd_set</span></code> structures are used, one for each event types. This is beacause button raises an <em>&#8220;error&#8221;</em> type event when the state have changed. In the above code, the <code class="docutils literal"><span class="pre">tim_fd</span></code> file descitor is a special desciptor pointing to a timer.</p>
+<p>To generate the output PWM signal, a timer is used. The timer is readable upon overflow. We will use a periodic timer as follow:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="cp">#define PWM_INC 10</span>
+<span class="cp">#define PWM_NS_MULT 100000</span>
+
+<span class="kt">int</span> <span class="n">tim_fd</span> <span class="o">=</span> <span class="n">timerfd_create</span><span class="p">(</span><span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="k">struct</span> <span class="n">itimerspec</span> <span class="n">tim_dur</span><span class="p">;</span>
+<span class="n">SET_TIM</span><span class="p">(</span><span class="n">tim_dur</span><span class="p">,</span> <span class="mi">100</span><span class="o">/</span><span class="n">PWM_INC</span> <span class="o">*</span> <span class="n">PWM_NS_MULT</span><span class="p">);</span>
+<span class="n">timerfd_settime</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tim_dur</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The application will then be blocked and not consuming resources as long no event comes. It will be woken at periodic interval or when a button is pressed in a interput manner.</p>
+<div class="section" id="source-code">
+<h2>Source code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-c"><div class="highlight"><pre><span class="cm">/**</span>
+<span class="cm"> * Copyright 2015 University of Applied Sciences Western Switzerland / Fribourg</span>
+<span class="cm"> * </span>
+<span class="cm"> * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="cm"> * you may not use this file except in compliance with the License.</span>
+<span class="cm"> * You may obtain a copy of the License at</span>
+<span class="cm"> * </span>
+<span class="cm"> *     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="cm"> * </span>
+<span class="cm"> * Unless required by applicable law or agreed to in writing, software</span>
+<span class="cm"> * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="cm"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="cm"> * See the License for the specific language governing permissions and</span>
+<span class="cm"> * limitations under the License.</span>
+<span class="cm"> * </span>
+<span class="cm"> * Project:	HEIA-FR / HES-SO MSE - MA-CSEL1 Laboratory</span>
+<span class="cm"> *</span>
+<span class="cm"> * Abstract: 	System programming -  file system</span>
+<span class="cm"> *</span>
+<span class="cm"> * Purpose:	ODROID-XU3 Lite silly fan control system</span>
+<span class="cm"> *</span>
+<span class="cm"> * Author:	Wolfram Luithardt</span>
+<span class="cm"> * Date:	30.03.2016</span>
+<span class="cm"> */</span>
+<span class="cp">#include &lt;sys/types.h&gt;</span>
+<span class="cp">#include &lt;sys/stat.h&gt;</span>
+<span class="cp">#include &lt;sys/timerfd.h&gt;</span>
+<span class="cp">#include &lt;sys/select.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#include &lt;errno.h&gt;</span>
+<span class="cp">#include &lt;time.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;syslog.h&gt;</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * pwm0 - gpb2.0 - 203</span>
+<span class="cm"> */</span>
+<span class="cp">#define GPIO_EXPORT	&quot;/sys/class/gpio/export&quot;</span>
+<span class="cp">#define GPIO_UNEXPORT	&quot;/sys/class/gpio/unexport&quot;</span>
+<span class="cp">#define GPIO_PWM	&quot;/sys/class/gpio/gpio203&quot;</span>
+<span class="cp">#define PWM		&quot;203&quot;</span>
+<span class="cp">#define SW_PREFIX	&quot;/sys/class/gpio/gpio&quot;</span>
+<span class="cp">#define SW1     &quot;29&quot;</span>
+<span class="cp">#define SW2     &quot;30&quot;</span>
+<span class="cp">#define SW3     &quot;22&quot;</span>
+
+<span class="cp">#define PWM_INC 10</span>
+<span class="cp">#define PWM_NS_MULT 100000</span>
+<span class="cp">#define MAX(x, y) ((x&gt;y)?x:y)</span>
+<span class="cp">#define SET_TIM(x, y) {\</span>
+<span class="cp"> 	x.it_interval.tv_sec=0;\</span>
+<span class="cp">  	x.it_interval.tv_nsec=y;\</span>
+<span class="cp">  	x.it_value.tv_sec=0;\</span>
+<span class="cp">   	x.it_value.tv_nsec=y;}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">open_pwm</span><span class="p">()</span>
+<span class="p">{</span>
+	<span class="c1">// unexport pin out of sysfs (reinitialization)</span>
+	<span class="kt">int</span> <span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_UNEXPORT</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">PWM</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">PWM</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// export pin to sysfs</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_EXPORT</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">PWM</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">PWM</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>	
+
+	<span class="c1">// config pin</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_PWM</span> <span class="s">&quot;/direction&quot;</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&quot;out&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// open gpio value attribute</span>
+ 	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_PWM</span> <span class="s">&quot;/value&quot;</span><span class="p">,</span> <span class="n">O_RDWR</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">f</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">open_switch</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">pin</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="kt">char</span> <span class="n">buffer</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+		<span class="c1">// unexport pin out of sysfs (reinitialization)</span>
+	<span class="kt">int</span> <span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_UNEXPORT</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="k">if</span><span class="p">(</span><span class="n">f</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">perror</span><span class="p">(</span><span class="s">&quot;unexport&quot;</span><span class="p">);</span>
+		<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">pin</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">pin</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// export pin to sysfs</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">GPIO_EXPORT</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="k">if</span><span class="p">(</span><span class="n">f</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">perror</span><span class="p">(</span><span class="s">&quot;export&quot;</span><span class="p">);</span>
+		<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">pin</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">pin</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>	
+
+	<span class="c1">// config pin as output</span>
+	<span class="n">sprintf</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s">&quot;%s%s%s&quot;</span><span class="p">,</span> <span class="n">SW_PREFIX</span><span class="p">,</span> <span class="n">pin</span><span class="p">,</span> <span class="s">&quot;/direction&quot;</span><span class="p">);</span>
+	<span class="c1">//printf(&quot;writing to %s\n&quot;, buffer);</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="k">if</span><span class="p">(</span><span class="n">f</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">perror</span><span class="p">(</span><span class="s">&quot;Setting pin as output&quot;</span><span class="p">);</span>
+		<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&quot;in&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;in&quot;</span><span class="p">));</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// Config pin for rising edge event</span>
+	<span class="n">sprintf</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s">&quot;%s%s%s&quot;</span><span class="p">,</span> <span class="n">SW_PREFIX</span><span class="p">,</span> <span class="n">pin</span><span class="p">,</span> <span class="s">&quot;/edge&quot;</span><span class="p">);</span>
+	<span class="c1">//printf(&quot;writing to %s\n&quot;, buffer);</span>
+	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">O_WRONLY</span><span class="p">);</span>
+	<span class="n">write</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s">&quot;rising&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;rising&quot;</span><span class="p">));</span>
+	<span class="k">if</span><span class="p">(</span><span class="n">f</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">perror</span><span class="p">(</span><span class="s">&quot;event&quot;</span><span class="p">);</span>
+		<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="n">close</span> <span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="c1">// open gpio value attribute</span>
+	<span class="n">sprintf</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s">&quot;%s%s%s&quot;</span><span class="p">,</span> <span class="n">SW_PREFIX</span><span class="p">,</span> <span class="n">pin</span><span class="p">,</span> <span class="s">&quot;/value&quot;</span><span class="p">);</span>
+	<span class="c1">//printf(&quot;Opening %s\n&quot;, buffer);</span>
+
+ 	<span class="n">f</span> <span class="o">=</span> <span class="n">open</span> <span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">O_RDWR</span><span class="p">);</span>
+	<span class="k">if</span><span class="p">(</span><span class="n">f</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">perror</span><span class="p">(</span><span class="s">&quot;Open for reading&quot;</span><span class="p">);</span>
+		<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+	<span class="p">}</span>
+
+			<span class="c1">// Make sure the select will block</span>
+	<span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+	<span class="n">lseek</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SEEK_SET</span><span class="p">);</span>
+
+	<span class="k">return</span> <span class="n">f</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> 
+<span class="p">{</span>
+	<span class="kt">char</span> <span class="n">dummy</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+	<span class="c1">// Open the syslog</span>
+	<span class="n">openlog</span><span class="p">(</span><span class="s">&quot;PWM control&quot;</span><span class="p">,</span> <span class="n">LOG_PERROR</span><span class="p">,</span> <span class="n">LOG_USER</span><span class="p">);</span>
+
+	<span class="c1">// Open the buttons</span>
+	<span class="kt">int</span> <span class="n">sw1_fd</span> <span class="o">=</span> <span class="n">open_switch</span><span class="p">(</span><span class="n">SW1</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">sw2_fd</span> <span class="o">=</span> <span class="n">open_switch</span><span class="p">(</span><span class="n">SW2</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">sw3_fd</span> <span class="o">=</span> <span class="n">open_switch</span><span class="p">(</span><span class="n">SW3</span><span class="p">);</span>
+
+	<span class="kt">int</span> <span class="n">duty_set</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">duty_current</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+	<span class="c1">// Set the driver</span>
+
+	<span class="c1">// Open PWM output</span>
+ 	<span class="kt">int</span> <span class="n">pwm</span> <span class="o">=</span> <span class="n">open_pwm</span><span class="p">();</span>
+	<span class="n">write</span><span class="p">(</span><span class="n">pwm</span><span class="p">,</span> <span class="s">&quot;1&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;1&quot;</span><span class="p">));</span>
+
+
+	<span class="c1">// Create the timer</span>
+	<span class="kt">int</span> <span class="n">tim_fd</span> <span class="o">=</span> <span class="n">timerfd_create</span><span class="p">(</span><span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+	<span class="k">struct</span> <span class="n">itimerspec</span> <span class="n">tim_dur</span><span class="p">;</span>
+	<span class="n">SET_TIM</span><span class="p">(</span><span class="n">tim_dur</span><span class="p">,</span> <span class="mi">100</span><span class="o">/</span><span class="n">PWM_INC</span> <span class="o">*</span> <span class="n">PWM_NS_MULT</span><span class="p">);</span>
+	<span class="n">timerfd_settime</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tim_dur</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+	<span class="kt">int</span> <span class="n">max_fd</span> <span class="o">=</span> <span class="n">MAX</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">,</span> <span class="n">sw2_fd</span><span class="p">);</span>
+	<span class="n">max_fd</span> <span class="o">=</span> <span class="n">MAX</span><span class="p">(</span><span class="n">max_fd</span><span class="p">,</span> <span class="n">sw3_fd</span><span class="p">);</span>
+	<span class="n">max_fd</span> <span class="o">=</span> <span class="n">MAX</span><span class="p">(</span><span class="n">max_fd</span><span class="p">,</span> <span class="n">tim_fd</span><span class="p">);</span>
+
+	<span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">fd_set</span> <span class="n">fds_sw</span><span class="p">,</span> <span class="n">fds_tim</span><span class="p">;</span>
+		<span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+		<span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+		<span class="n">FD_SET</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">);</span>
+		<span class="n">FD_SET</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+		<span class="n">FD_SET</span><span class="p">(</span><span class="n">sw2_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+		<span class="n">FD_SET</span><span class="p">(</span><span class="n">sw3_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">);</span>
+
+		<span class="c1">// Look  if the timer thas overflows</span>
+		<span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">select</span><span class="p">(</span><span class="n">max_fd</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+		<span class="c1">// Manage errors</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+		<span class="p">{</span>
+			<span class="n">perror</span><span class="p">(</span><span class="s">&quot;Selec()&quot;</span><span class="p">);</span>
+			<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+		<span class="p">}</span>
+		<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="p">{</span>
+			<span class="n">perror</span><span class="p">(</span><span class="s">&quot;Timeout should not occure!&quot;</span><span class="p">);</span>
+			<span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+		<span class="p">}</span>
+		<span class="c1">// Normal case</span>
+		<span class="k">else</span>
+		<span class="p">{</span>
+			<span class="c1">// Handle timer</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_tim</span><span class="p">))</span>
+			<span class="p">{</span>
+				<span class="n">read</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">,</span> <span class="n">dummy</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+				<span class="c1">//printf(&quot;Timer!\n&quot;);</span>
+
+				<span class="n">duty_current</span> <span class="o">=</span> <span class="p">(</span><span class="n">duty_current</span> <span class="o">+</span> <span class="n">PWM_INC</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span><span class="p">;</span>
+
+				<span class="c1">// Toggle pin</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">duty_current</span> <span class="o">&lt;</span> <span class="n">duty_set</span><span class="p">)</span>
+					<span class="n">write</span><span class="p">(</span><span class="n">pwm</span><span class="p">,</span> <span class="s">&quot;1&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;1&quot;</span><span class="p">));</span>
+				<span class="k">else</span>
+					<span class="n">write</span><span class="p">(</span><span class="n">pwm</span><span class="p">,</span> <span class="s">&quot;0&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;0&quot;</span><span class="p">));</span>
+
+			<span class="p">}</span>
+			<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">))</span>
+			<span class="p">{</span>
+				<span class="c1">// Make sure the select will block</span>
+				<span class="n">read</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">,</span> <span class="n">dummy</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+				<span class="n">lseek</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SEEK_SET</span><span class="p">);</span>
+
+				<span class="c1">// Manage duty cycle</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">duty_set</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">)</span>
+					<span class="n">duty_set</span> <span class="o">+=</span> <span class="n">PWM_INC</span><span class="p">;</span>
+				<span class="n">printf</span><span class="p">(</span><span class="s">&quot;Duty cyle is now %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duty_set</span><span class="p">);</span>
+			<span class="p">}</span>
+			<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">sw2_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">))</span>
+			<span class="p">{</span>
+				<span class="c1">// Make sure the select will block</span>
+				<span class="n">read</span><span class="p">(</span><span class="n">sw2_fd</span><span class="p">,</span> <span class="n">dummy</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+				<span class="n">lseek</span><span class="p">(</span><span class="n">sw2_fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SEEK_SET</span><span class="p">);</span>
+				
+				<span class="c1">// Manage duty cycle</span>
+				<span class="n">duty_set</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span>
+				<span class="n">printf</span><span class="p">(</span><span class="s">&quot;Duty cyle is now %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duty_set</span><span class="p">);</span>
+			<span class="p">}</span>
+			<span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">sw3_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fds_sw</span><span class="p">))</span>
+			<span class="p">{</span>
+				<span class="c1">// Make sure the select will block</span>
+				<span class="n">read</span><span class="p">(</span><span class="n">sw3_fd</span><span class="p">,</span> <span class="n">dummy</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>
+				<span class="n">lseek</span><span class="p">(</span><span class="n">sw3_fd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SEEK_SET</span><span class="p">);</span>
+				
+				<span class="c1">// Manage duty cycle</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">duty_set</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+					<span class="n">duty_set</span> <span class="o">-=</span> <span class="n">PWM_INC</span><span class="p">;</span>
+				<span class="n">printf</span><span class="p">(</span><span class="s">&quot;Duty cyle is now %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duty_set</span><span class="p">);</span>
+			<span class="p">}</span>
+			<span class="k">else</span>
+			<span class="p">{</span>
+				<span class="n">printf</span><span class="p">(</span><span class="s">&quot;Unkown fd set in select</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+
+
+	<span class="p">}</span>
+
+	<span class="n">close</span><span class="p">(</span><span class="n">tim_fd</span><span class="p">);</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">pwm</span><span class="p">);</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">sw3_fd</span><span class="p">);</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">sw2_fd</span><span class="p">);</span>
+	<span class="n">close</span><span class="p">(</span><span class="n">sw1_fd</span><span class="p">);</span>
+
+	<span class="n">closelog</span><span class="p">();</span>
+
+	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
 </div>
 
 
@@ -139,6 +451,8 @@
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="scheduler.html" class="btn btn-neutral float-right" title="Schedulers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="drivers.html" class="btn btn-neutral" title="Drivers" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

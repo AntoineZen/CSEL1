@@ -97,6 +97,8 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="file_system.html">File Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scheduler.html">Schedulers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimizations.html">Optimizations</a></li>
 </ul>
 
             
@@ -188,7 +190,13 @@
         <span class="n">product_id</span>  <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0xFFFFF000</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">;</span>
         
         <span class="c1">// Print the informations readen</span>
-        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">product_id</span><span class="p">,</span> <span class="n">package_id</span><span class="p">,</span> <span class="n">major_v</span><span class="p">,</span> <span class="n">minor_v</span><span class="p">);</span>
+        <span class="n">printf</span><span class="p">(</span>
+            <span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+             <span class="n">product_id</span><span class="p">,</span> 
+             <span class="n">package_id</span><span class="p">,</span> 
+             <span class="n">major_v</span><span class="p">,</span>
+              <span class="n">minor_v</span>
+              <span class="p">);</span>
     
         <span class="c1">// Unmap the ID register</span>
         <span class="n">munmap</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="mh">0x100</span><span class="p">);</span>
@@ -265,7 +273,13 @@
 <span class="p">{</span>
 
     <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Module mmaptest: mmap handler called.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">remap_pfn_range</span><span class="p">(</span><span class="n">vma</span><span class="p">,</span> <span class="n">vma</span><span class="o">-&gt;</span><span class="n">vm_start</span><span class="p">,</span> <span class="n">REG_ADDR</span> <span class="o">&gt;&gt;</span> <span class="n">PAGE_SHIFT</span><span class="p">,</span> <span class="n">REG_SIZE</span><span class="p">,</span>  <span class="n">vma</span><span class="o">-&gt;</span><span class="n">vm_page_prot</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">remap_pfn_range</span><span class="p">(</span>
+        <span class="n">vma</span><span class="p">,</span> 
+        <span class="n">vma</span><span class="o">-&gt;</span><span class="n">vm_start</span><span class="p">,</span> 
+        <span class="n">REG_ADDR</span> <span class="o">&gt;&gt;</span> <span class="n">PAGE_SHIFT</span><span class="p">,</span> 
+        <span class="n">REG_SIZE</span><span class="p">,</span>  
+        <span class="n">vma</span><span class="o">-&gt;</span><span class="n">vm_page_prot</span>
+        <span class="p">);</span>
 <span class="p">}</span>
 
 
@@ -443,7 +457,13 @@
         <span class="n">product_id</span>  <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0xFFFFF000</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">;</span>
         
         <span class="c1">// Print the informations readen</span>
-        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">product_id</span><span class="p">,</span> <span class="n">package_id</span><span class="p">,</span> <span class="n">major_v</span><span class="p">,</span> <span class="n">minor_v</span><span class="p">);</span>
+        <span class="n">printf</span><span class="p">(</span>
+                <span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> 
+                <span class="n">product_id</span><span class="p">,</span> 
+                <span class="n">package_id</span><span class="p">,</span> 
+                <span class="n">major_v</span><span class="p">,</span> 
+                <span class="n">minor_v</span>
+                <span class="p">);</span>
         
                 <span class="c1">// Unmap the ID register</span>
                 <span class="n">munmap</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="mh">0x100</span><span class="p">);</span>
@@ -509,7 +529,12 @@
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> 
+    <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
         <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
@@ -522,7 +547,12 @@
     <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> 
+    <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Device write</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
     <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
@@ -1109,13 +1139,21 @@
     <span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">device_release</span>
 <span class="p">};</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_marque</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
     <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_marque</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
@@ -1125,14 +1163,20 @@
     <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="c1">//modele must be converted to cstring</span>
     <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
     <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
@@ -1142,12 +1186,21 @@
     <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_show_vitesse</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="k">return</span> <span class="n">sprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;%u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">voiture</span><span class="p">.</span><span class="n">vitesse_max</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">skeleton_store_vitesse</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">count</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="c1">//buf must be converted to int</span>
     <span class="kt">long</span> <span class="n">vitesse</span><span class="p">;</span>
@@ -1171,7 +1224,12 @@
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_read</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> 
+    <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+
 <span class="p">{</span>
     <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
         <span class="n">len</span><span class="o">=</span><span class="n">BUFFER_SIZE</span><span class="p">;</span>
@@ -1182,7 +1240,12 @@
     <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">device_write</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">filp</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">len</span><span class="p">,</span> 
+    <span class="kt">loff_t</span> <span class="o">*</span><span class="n">off</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="n">pr_info</span> <span class="p">(</span><span class="s">&quot;Device write</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
     <span class="k">if</span><span class="p">(</span><span class="n">len</span><span class="o">&gt;</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
@@ -1355,13 +1418,22 @@
 <span class="p">};</span>
 
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_marque</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
     <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_marque</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_marque</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">count</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">marque</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
@@ -1371,14 +1443,23 @@
     <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_modele</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="c1">//modele must be converted to cstring</span>
     <span class="n">strcpy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
     <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_modele</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_modele</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">count</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">voiture</span><span class="p">.</span><span class="n">modele</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">)</span>
@@ -1388,12 +1469,21 @@
     <span class="k">return</span> <span class="n">len</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_show_vitesse</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span><span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="k">return</span> <span class="n">sprintf</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;%u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">voiture</span><span class="p">.</span><span class="n">vitesse_max</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_vitesse</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">count</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_store_vitesse</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">device_attribute</span> <span class="o">*</span> <span class="n">attr</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">buf</span><span class="p">,</span> <span class="n">s</span>
+    <span class="kt">ize_t</span> <span class="n">count</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="c1">//buf must be converted to int</span>
     <span class="kt">long</span> <span class="n">vitesse</span><span class="p">;</span>
@@ -1426,7 +1516,10 @@
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="nf">button_poll</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">struct</span> <span class="n">poll_table_struct</span><span class="o">*</span> <span class="n">wait</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="nf">button_poll</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> 
+    <span class="k">struct</span> <span class="n">poll_table_struct</span><span class="o">*</span> <span class="n">wait</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="c1">// Wait to have an event in the queue</span>
     <span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Before pool_wait()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
@@ -1443,7 +1536,12 @@
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_read</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> 
+    <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> 
+    <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="kt">char</span><span class="o">*</span> <span class="n">val</span><span class="p">;</span>
     
@@ -1465,7 +1563,12 @@
     <span class="k">return</span> <span class="mi">2</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_write</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">button_write</span><span class="p">(</span>
+    <span class="k">struct</span> <span class="n">file</span><span class="o">*</span> <span class="n">f</span><span class="p">,</span> 
+    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span> 
+    <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> 
+    <span class="kt">loff_t</span><span class="o">*</span> <span class="n">offset</span>
+    <span class="p">)</span>
 <span class="p">{</span>
     <span class="k">return</span> <span class="n">size</span><span class="p">;</span>
 <span class="p">}</span>
@@ -1529,7 +1632,13 @@
     
     <span class="c1">//register the IRQ</span>
     <span class="n">gpio_request</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">);</span>
-    <span class="n">status</span> <span class="o">=</span> <span class="n">request_irq</span><span class="p">(</span><span class="n">gpio_to_irq</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">),</span> <span class="n">button_irq</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;button&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">request_irq</span><span class="p">(</span>
+        <span class="n">gpio_to_irq</span><span class="p">(</span><span class="n">BUTTON_IO_NR</span><span class="p">),</span> 
+        <span class="n">button_irq</span><span class="p">,</span> 
+        <span class="mi">0</span><span class="p">,</span> 
+        <span class="s">&quot;button&quot;</span><span class="p">,</span> 
+        <span class="nb">NULL</span>
+        <span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
     <span class="p">{</span>
         <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Failed to map button IRQ&quot;</span><span class="p">);</span>

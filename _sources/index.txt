@@ -16,6 +16,10 @@ Contents:
    env_setup
    kernel_module
    drivers
+   file_system
+   scheduler
+   optimizations
+
    
 
 Indices and tables

@@ -101,6 +101,8 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="file_system.html">File Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scheduler.html">Schedulers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimizations.html">Optimizations</a></li>
 </ul>
 
             
@@ -485,7 +487,13 @@ kmem_cache           126    126    192   21    1 : tunables    0    0    0 : sla
     	<span class="n">product_id</span>  <span class="o">=</span> <span class="p">(</span><span class="n">id</span> <span class="o">&amp;</span> <span class="mh">0xFFFFF000</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">12</span><span class="p">;</span>
     	
     	<span class="c1">// Print the informations readen</span>
-    	<span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">product_id</span><span class="p">,</span> <span class="n">package_id</span><span class="p">,</span> <span class="n">major_v</span><span class="p">,</span> <span class="n">minor_v</span><span class="p">);</span>
+    	<span class="n">pr_info</span><span class="p">(</span>
+            <span class="s">&quot;Product=%d, package=%d, major=%d, minor=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> 
+            <span class="n">product_id</span><span class="p">,</span> 
+            <span class="n">package_id</span><span class="p">,</span> 
+            <span class="n">major_v</span><span class="p">,</span> 
+            <span class="n">minor_v</span>
+            <span class="p">);</span>
     <span class="p">}</span>
     
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
