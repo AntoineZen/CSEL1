@@ -76,7 +76,7 @@ When run, this program give the following output:
 	27610 prime_num.txt
 
 
-This version takes 25.27 seconds to run, this is gain of xx% over the unmodified version. It has found 27610 primve number between 1 and 320'000.
+This version takes 25.27 seconds to run. It has found 27610 primve number between 1 and 320'000.
 
 Modified to remplace fprintf() by itoa()
 ----------------------------------------
@@ -84,6 +84,7 @@ Modified to remplace fprintf() by itoa()
 This version removes the ``fprintf()`` call by ``itoa()`` as it is more efficient. The ``printf()`` call is remplaced by the following code:
 
 .. code-block:: c
+
     itoa(num, buffer);
     int len = strlen(buffer);
     buffer[len] = '\n';
@@ -102,7 +103,7 @@ When run, this program give the following output:
 	27610 prime_num.txt
 
 
-This version takes 27.61 seconds to run, this is gain of xx% over the unmodified version. It has found 27610 primve number between 1 and 320'000.
+This version takes 27.61 seconds to run. It has found 27610 primve number between 1 and 320'000.
 
 Threaded Version
 ----------------
@@ -129,14 +130,14 @@ A run of this version gives:
 	27610 prime_num.txt
 
 
-This version takes 26.044 seconds to run, this is gain of xx% over the unmodified version.
+This version takes 26.044 seconds to run.
 
 Changed Prime calculation algorithm
 -----------------------------------
 
 This version have a new optimized alogrithm to check if a number is a prime number or not. This alogrithm was found at https://en.wikipedia.org/wiki/Primality_test#Pseudocode and transposed to C. The code is then the following:
 
-..code-block:: c
+.. code-block:: c
 
 	inline int is_prime(int n)
 	{
@@ -206,7 +207,7 @@ This version have a new optimized alogrithm to check if a number is a prime numb
 
 When run, this program give the following output:
 
-..code-block:: console
+.. code-block:: console
 
 	# /usr/workspace/prime_opt 
 	There is 8 cores
@@ -222,7 +223,7 @@ When run, this program give the following output:
 	23.866 ms
 
 
-This version takes 0.023 seconds to run, this is gain of xx% over the unmodified version.
+This version takes 0.023 seconds to run.
 
 
 Summary
@@ -245,12 +246,14 @@ The following table give an overview of the different optimization and the gain 
 +---------------------------------+----------------+-------+
 
 
+This shows that the alogritm optimization is the key point to performace. Maybe, when the algorithm is optimal, then oper optimization can lead to a noticable speed-up.
+
 Test on final algorithm
 -----------------------
 
 This is the program run with the initial range:
 
-..code-block:: console
+.. code-block:: console
 
 	# /usr/workspace/prime_opt 
 	There is 8 cores
