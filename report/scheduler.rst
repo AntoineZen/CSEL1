@@ -4,6 +4,87 @@ Schedulers
 1. Mulit-process application
 ----------------------------
 
+In this task, we modify the application made in the last lab in order to split it into two process. 
+
+Each process will have its own executable. So each process have ist own source file.The fist process, called *pwm_master* will read the button add pass the duty cycle selected to the second one using a named pipe. The second process, called *pwm_slave* will read from the named pipe and manage the GPIO output to create the PWM signal.
+
+The first process will fork. The forked process (children) will just make a call to 
+create the second process by calling ``execlp()`` as shown bellow:
+
+
+.. code-block:: c
+
+	int child_fd = fork();
+	if (child_fd > 0)
+	{
+		// Master process code (parent)
+		...
+	}
+	else
+	{
+		// Forked (child) code
+		// Call the slave process that controls the fan
+		ret = execlp("./pwm_slave", "pwm_slave", NULL);
+		if(ret > 0)
+		{
+			perror("execlp()\n");
+		}
+	}
+
+Both process tries to create the named pipe if it not exist:
+
+.. code-block:: c
+
+	int ret = mkfifo(FIFO_NAME, 0666);
+	if (ret)
+	{
+		perror("mkfifo()\n");
+	}
+
+The master (parent) process then open it for writing:
+
+.. code-block:: c
+
+	int child_fd = fork();
+	if (child_fd > 0)
+	{
+		int fifo_fd = open(FIFO_NAME, O_WRONLY);
+		// parent process, will handle the button, passing the duty to the child
+		while(1) 
+		{
+			...
+		}	
+	}
+
+While the slave (children) process open it for reading:
+
+.. code-block:: c
+
+	int fifo_fd = open(FIFO_NAME, O_RDONLY);
+	// child process, will handle the fan
+	while(1) 
+	{
+		...
+	}
+
+**Note** that the slave process can use ``select()`` to wait (block) on the named pipe for new data to come. Named pipe can be used like files, but are not written to disk.
+
+Master process
+^^^^^^^^^^^^^^
+
+Here after is the whole code of the master process:
+
+.. literalinclude:: ../05_scheduler/01/master.c
+   :language: c
+
+
+Slave process
+^^^^^^^^^^^^^^
+
+Here after is the whole code of the slave process:
+
+.. literalinclude:: ../05_scheduler/01/slave.c
+   :language: c
 
 2. clock_gettime() resolution
 -----------------------------
