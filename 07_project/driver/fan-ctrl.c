@@ -1,6 +1,3 @@
-/*
-skeleton.c
-*/
 #include <linux/module.h>
 /* needed by all modules */
 #include <linux/init.h>
@@ -13,109 +10,89 @@ skeleton.c
 #include <linux/string.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/thermal.h>
+#include <linux/pwm.h>
+#include <linux/kthread.h> /* for use threads */
+#include <linux/delay.h> /* for use ssleep */
+
+
 #define BUFFER_SIZE 200
+#define PERIOD_NS 20972
+
+#define DRIVER_NAME "fan-ctrl"
+#define MODE_AUTO "auto\n"
+#define MODE_MAN "manual\n"
+
+#define MAX(x, y) ((x>y)?x:y)       
 
 char text[BUFFER_SIZE];
 
 //storage structure accessed by sysfs
-struct struct_voiture{
-    char marque[100];
-    char modele[100];
-    int vitesse_max;
+struct fan_ctrl_t{
+    char mode[100];
+    int duty;
+    int temp;
+    struct pwm_device* pwm;
 };
 
-static struct struct_voiture voiture = {
-    .marque="Subaru\n",
-    .modele="Impreza\n",
-    .vitesse_max = 300
+static struct fan_ctrl_t fan_ctrl_var = {
+    .mode=MODE_AUTO,
+    .duty =  20,
 };
 
-static int device_open(struct inode *, struct file *);
-static int device_release(struct inode *, struct file *);
-static ssize_t device_read(struct file *, char *, size_t, loff_t *);
-static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
-static dev_t skeleton_dev;
-static struct cdev skeleton_cdev;
+
 
 // sysfs
 static void sysfs_dev_release(struct device * dev) {}
 
 static struct platform_driver sysfs_driver= {
-    .driver = {.name = "skeleton",},
+    .driver = {.name = DRIVER_NAME,},
 };
 
 static struct platform_device sysfs_device = {
-    .name= "skeleton",
+    .name= DRIVER_NAME,
     .id = -1,
     .dev.release = sysfs_dev_release
 };
 
-struct file_operations skeleton_fops =
-{
-    .owner = THIS_MODULE,
-    .read = device_read,
-    .write = device_write,
-    .open = device_open,
-    .release = device_release
-};
 
-static ssize_t skeleton_show_marque(
+
+static ssize_t fan_ctrl_show_mode(
     struct device* dev, 
     struct device_attribute * attr, 
     char * buf
     )
 {
-    strcpy(buf, voiture.marque);
-    return strlen(voiture.marque);
+    strcpy(buf, fan_ctrl_var.mode);
+    return strlen(fan_ctrl_var.mode);
 }
 
-static ssize_t skeleton_store_marque(
+static ssize_t fan_ctrl_store_mode(
     struct device * dev, 
     struct device_attribute * attr, 
     const char * buf, size_t count
     )
 {
-    int len = sizeof(voiture.marque) - 1;
+    int len = sizeof(fan_ctrl_var.mode) - 1;
     if (len > count)
         len = count;
-    strncpy(voiture.marque, buf, len);
-    voiture.marque[len] = 0;
+    strncpy(fan_ctrl_var.mode, buf, len);
+    fan_ctrl_var.mode[len] = 0;
+    printk("Mode changed to %s.", fan_ctrl_var.mode);
     return len;
 }
 
-static ssize_t skeleton_show_modele(struct device* dev, 
-    struct device_attribute * attr, 
-    char * buf
-    )
-{
-    //modele must be converted to cstring
-    strcpy(buf, voiture.modele);
-    return strlen(voiture.modele);
-}
 
-static ssize_t skeleton_store_modele(struct device * dev, 
-    struct device_attribute * attr, 
-    const char * buf, size_t count
-    )
-{
-    int len = sizeof(voiture.modele) - 1;
-    if (len > count)
-        len = count;
-    strncpy(voiture.modele, buf, len);
-    voiture.modele[len] = 0;
-    return len;
-}
-
-static ssize_t skeleton_show_vitesse(
+static ssize_t fan_ctrl_show_duty(
     struct device* dev, 
     struct device_attribute * attr, 
     char * buf
     )
 {
-    return sprintf(buf, "%u\n",voiture.vitesse_max);
+    return sprintf(buf, "%u\n", fan_ctrl_var.duty);
 }
 
-static ssize_t skeleton_store_vitesse(
+static ssize_t fan_ctrl_store_duty(
     struct device * dev, 
     struct device_attribute * attr, 
     const char * buf, 
@@ -123,95 +100,165 @@ static ssize_t skeleton_store_vitesse(
     )
 {
     //buf must be converted to int
-    long vitesse;
-    if(!kstrtol (buf, 10, &vitesse))
-        voiture.vitesse_max = (int)vitesse;
+    long duty;
+    if(!kstrtol (buf, 10, &duty))
+    {
+        fan_ctrl_var.duty= (int)duty;
+    }
+
+    // Avoid overflow
+    if( fan_ctrl_var.duty > 100 )
+        fan_ctrl_var.duty = 100;
+
+    // Avoid undeflow
+    if( fan_ctrl_var.duty < 0)
+        fan_ctrl_var.duty = 0;
+    printk("Duty changed to %d", fan_ctrl_var.duty);
     return strlen(buf);
 }
 
-//declare devices attributes structures
-DEVICE_ATTR(marque, 0660, skeleton_show_marque, skeleton_store_marque);
-DEVICE_ATTR(modele, 0660, skeleton_show_modele, skeleton_store_modele);
-DEVICE_ATTR(vitesse, 0660, skeleton_show_vitesse, skeleton_store_vitesse);
-
-static int device_open(struct inode *inode, struct file *file)
-{
-    return 0;
-}
-
-static int device_release(struct inode *inode, struct file *file)
-{
-    return 0;
-}
-
-static ssize_t device_read(
-    struct file *filp, 
-    char *buff, 
-    size_t len, 
-    loff_t *off)
-
-{
-    if(len>BUFFER_SIZE)
-        len=BUFFER_SIZE;
-    if(len>strlen(text))
-        len=strlen(text);
-    copy_to_user(buff, text, strlen(text));
-    text[0]=0;
-    return len;
-}
-
-static ssize_t device_write(
-    struct file *filp,
-    const char *buff, 
-    size_t len, 
-    loff_t *off
+static ssize_t fan_ctrl_show_temp(
+    struct device* dev, 
+    struct device_attribute * attr, 
+    char * buf
     )
 {
-    pr_info ("Device write\n");
-    if(len>BUFFER_SIZE)
-        len=BUFFER_SIZE;
-    copy_from_user(text, buff, len);
-    return len;
+    return sprintf(buf, "%d\n", fan_ctrl_var.temp);
 }
+
+
+//declare devices attributes structures
+DEVICE_ATTR(mode, 0660, fan_ctrl_show_mode, fan_ctrl_store_mode);
+DEVICE_ATTR(duty, 0660, fan_ctrl_show_duty, fan_ctrl_store_duty);
+DEVICE_ATTR(temp, 0440, fan_ctrl_show_temp, NULL);
+
+struct task_struct* fan_ctrl_task;
+
+static const char th_zones[][15] = 
+{
+    "cpu0-thermal",
+    "cpu1-thermal",
+    "cpu2-thermal",
+    "cpu3-thermal",
+    "gpu-thermal",
+};
+
+
+int fan_ctrl_thread(void* data)
+{
+    int i;
+    int temp_work;
+    int ret;
+    int duty_ns;
+
+    // get the passed parameters
+    struct fan_ctrl_t* state = (struct fan_ctrl_t*)data;
+
+    // Enable PWM
+    ret = pwm_enable(state->pwm);
+    if(ret)
+    {
+        pr_err("Error enabling PWM output\n");
+    }
+
+    // Initial seting of pwm
+    duty_ns = (PERIOD_NS * state->duty) / 100;
+    ret = pwm_config(state->pwm, duty_ns, PERIOD_NS);
+    if(ret)
+    {
+        pr_err("Error setting PWM output\n");
+    }
+
+    while(!kthread_should_stop())
+    {
+        // get the maxiumum temperature of the CPU
+        state->temp = -50000;
+        for(i = 0; i< sizeof(th_zones); i++)
+        {
+            thermal_zone_get_temp(thermal_zone_get_zone_by_name(th_zones[i]), &temp_work);
+            state->temp = MAX(state->temp, temp_work);
+        }
+
+        // Do we are in auto mode ?
+        if(strcmp(state->mode, MODE_AUTO) == 0)
+        { 
+            // Change the duty accoring the temperature
+            if( state->temp < 57000 )
+                state->duty = 0;
+            else if( state->temp < 63000 )
+                state->duty = 20;
+            else if( state->temp < 68000 )
+                state->duty = 50;
+            else 
+                state->duty = 100;
+        }
+
+        // Update PWM output
+        duty_ns = (PERIOD_NS * state->duty) / 100;
+        ret = pwm_config(state->pwm, duty_ns, PERIOD_NS);
+        if(ret)
+        {
+            pr_err("Error setting PWM output\n");
+        }
+
+        // Sleep for half a second
+        msleep(500);
+    }
+
+    pwm_disable(state->pwm);
+    return 0;
+}
+
 
 static int __init skeleton_init(void)
 {
-    int status = alloc_chrdev_region (&skeleton_dev, 0, 1, "skeleton");
-    if(status == 0){
-        cdev_init (&skeleton_cdev, &skeleton_fops);
-        skeleton_cdev.owner = THIS_MODULE;
-        status = cdev_add (&skeleton_cdev, skeleton_dev, 1);
-    }
-    if (status == 0) 
-        pr_info ("Skeleton device driver loaded\n");
+    int status = 0;
+
     //sysfs register driver+device and add devices attributes
     if (status == 0)
         status = platform_driver_register(&sysfs_driver);
     if (status == 0)
         status = platform_device_register(&sysfs_device);
     if (status == 0)
-        device_create_file(&sysfs_device.dev, &dev_attr_marque);
+    {
+        device_create_file(&sysfs_device.dev, &dev_attr_mode);
     
-    device_create_file(&sysfs_device.dev, &dev_attr_modele);
-    device_create_file(&sysfs_device.dev, &dev_attr_vitesse);
+        device_create_file(&sysfs_device.dev, &dev_attr_duty);
+        device_create_file(&sysfs_device.dev, &dev_attr_temp);
+    }
+
+    fan_ctrl_var.pwm = pwm_request(0, DRIVER_NAME);
+
+    fan_ctrl_task = kthread_run(fan_ctrl_thread, &fan_ctrl_var, "fan-ctrl thread");
+    if(fan_ctrl_task == NULL)
+    {
+        pr_err("Unable to start fan-ctrl thread.");
+        return 1;
+    }
+    if (status == 0)
+        pr_info ("fan-ctrl device driver loaded\n");
     return status;
 }
 static void __exit skeleton_exit(void)
 {
+    kthread_stop(fan_ctrl_task);
+
+    pwm_free(fan_ctrl_var.pwm);
+
     //sysfs remove devices attributes and unregister device+driver
-    device_remove_file(&sysfs_device.dev, & dev_attr_marque);
-    device_remove_file(&sysfs_device.dev, & dev_attr_modele);
-    device_create_file(&sysfs_device.dev, &dev_attr_vitesse);
+    device_remove_file(&sysfs_device.dev, &dev_attr_mode);
+    device_remove_file(&sysfs_device.dev, &dev_attr_duty);
+    device_remove_file(&sysfs_device.dev, &dev_attr_temp);
+
     platform_device_unregister(&sysfs_device);
     platform_driver_unregister(&sysfs_driver);
-    cdev_del (&skeleton_cdev);
-    unregister_chrdev_region(skeleton_dev, 1);
-    pr_info("Linux module skeleton unloaded \n");
+
+    pr_info("Linux module fan-ctrl unloaded \n");
 }
 
 module_init(skeleton_init);
 module_exit(skeleton_exit);
-MODULE_AUTHOR("Yann Maret");
+MODULE_AUTHOR("Antoine Zen-Ruffinena");
 MODULE_DESCRIPTION("Module skeleton");
 MODULE_LICENSE("GPL");
 
