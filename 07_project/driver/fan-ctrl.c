@@ -78,7 +78,7 @@ static ssize_t fan_ctrl_store_mode(
         len = count;
     strncpy(fan_ctrl_var.mode, buf, len);
     fan_ctrl_var.mode[len] = 0;
-    printk("Mode changed to %s.", fan_ctrl_var.mode);
+    pr_info("Mode changed to %s", fan_ctrl_var.mode);
     return len;
 }
 
@@ -113,7 +113,7 @@ static ssize_t fan_ctrl_store_duty(
     // Avoid undeflow
     if( fan_ctrl_var.duty < 0)
         fan_ctrl_var.duty = 0;
-    printk("Duty changed to %d", fan_ctrl_var.duty);
+    pr_info("Duty changed to %d\n", fan_ctrl_var.duty);
     return strlen(buf);
 }
 
@@ -222,7 +222,6 @@ static int __init skeleton_init(void)
     if (status == 0)
     {
         device_create_file(&sysfs_device.dev, &dev_attr_mode);
-    
         device_create_file(&sysfs_device.dev, &dev_attr_duty);
         device_create_file(&sysfs_device.dev, &dev_attr_temp);
     }
@@ -232,7 +231,7 @@ static int __init skeleton_init(void)
     fan_ctrl_task = kthread_run(fan_ctrl_thread, &fan_ctrl_var, "fan-ctrl thread");
     if(fan_ctrl_task == NULL)
     {
-        pr_err("Unable to start fan-ctrl thread.");
+        pr_err("Unable to start fan-ctrl thread.\n");
         return 1;
     }
     if (status == 0)
