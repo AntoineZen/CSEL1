@@ -1,0 +1,826 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Mini-Project &mdash; CSEL1 0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="CSEL1 0.0 documentation" href="index.html"/>
+        <link rel="prev" title="Optimizations" href="optimizations.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CSEL1
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="env_setup.html">Environement setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kernel_module.html">Kernel Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scheduler.html">Schedulers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimizations.html">Optimizations</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Mini-Project</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#kernel-driver">Kernel Driver</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#sysfs-inteface">Sysfs inteface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#thread">Thread</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pwm-ouput">PWM ouput</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#daemon">Daemon</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#board-interaction">Board interaction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#socket-interaction">Socket interaction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#explication">Explication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Daemon</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gpio">GPIO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#driver">Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#server">Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#timer">Timer</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#application">Application</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#deamon-communiction">Deamon communiction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#user-interface">User interface</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">CSEL1</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Mini-Project</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/project.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="mini-project">
+<h1>Mini-Project<a class="headerlink" href="#mini-project" title="Permalink to this headline">¶</a></h1>
+<p>In this project we have the task to create a system made of 3 software:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A kernel driver</li>
+<li>A daemon application that uses the driver</li>
+<li>A client that controls the daemon</li>
+</ul>
+</div></blockquote>
+<p>The kernel driver enable to read the CPU temperature and to drive the CPU&#8217;s fan using PWM.
+It has also two mode. One is manual mode, where an user-land application can control the fan speed. In the seconde <em>&#8220;automatic&#8221;</em> mode, the kernel module drives the fan speed according the readen temperature.</p>
+<p>The dameon application uses the interface provided by the kernel driver to manage it. In addition, the dameon appicion can be controller in two way: by an application that comunicate with it using IPC or directly by the hardware of the Odroid. The button and led can be used to change the mode and to set the fan speed in manual mode.</p>
+<p>The client application can do exacly the same task that the button but can also read the system status.</p>
+<div class="section" id="kernel-driver">
+<h2>Kernel Driver<a class="headerlink" href="#kernel-driver" title="Permalink to this headline">¶</a></h2>
+<p>The kernel driver uses sysfs as a interface as it is easyer to read &amp; write some simple parameter as we will have in this application. We are not making heavy data-exchange that whould requires a stream or memory interface.</p>
+<p>It will run a thread to handle the temperature read-out and to implement the automatic mode.
+It will also drives the PWM.</p>
+<p>The driver will expose 3 variables to the user application:</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">duty:</th><td class="field-body">Current duty cycle (read/write, read only in auto mode)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">mode:</th><td class="field-body">Current working mode, auto or manual</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">temp:</th><td class="field-body">Current CPU termperature.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>The kerenel module will uses the following data structre to handle its internal state:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">struct</span> <span class="kt">fan_ctrl_t</span><span class="p">{</span>
+    <span class="kt">char</span> <span class="n">mode</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">duty</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">temp</span><span class="p">;</span>
+    <span class="k">struct</span> <span class="n">pwm_device</span><span class="o">*</span> <span class="n">pwm</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="kt">fan_ctrl_t</span> <span class="n">fan_ctrl_var</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">mode</span><span class="o">=</span><span class="n">MODE_AUTO</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">duty</span> <span class="o">=</span>  <span class="mi">20</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<div class="section" id="sysfs-inteface">
+<h3>Sysfs inteface<a class="headerlink" href="#sysfs-inteface" title="Permalink to this headline">¶</a></h3>
+<p>The driver paramters will be materialized in the sysfs structure by the following files:</p>
+<blockquote>
+<div><ul class="simple">
+<li>duty: <code class="docutils literal"><span class="pre">/sys/devices/platform/fan-ctrl/duty</span></code></li>
+<li>mode: <code class="docutils literal"><span class="pre">/sys/devices/platform/fan-ctrl/mode</span></code></li>
+<li>temp: <code class="docutils literal"><span class="pre">/sys/devices/platform/fan-ctrl/temp</span></code></li>
+</ul>
+</div></blockquote>
+<p>This is realized in the code by declaring them as a device attributes:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">fan_ctrl_show_mode</span><span class="p">,</span> <span class="n">fan_ctrl_store_mode</span><span class="p">);</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">duty</span><span class="p">,</span> <span class="mo">0660</span><span class="p">,</span> <span class="n">fan_ctrl_show_duty</span><span class="p">,</span> <span class="n">fan_ctrl_store_duty</span><span class="p">);</span>
+<span class="n">DEVICE_ATTR</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="mo">0440</span><span class="p">,</span> <span class="n">fan_ctrl_show_temp</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>And then in the module initialization function, a sysfs driver is declared and the access files are created:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">sysfs_dev_release</span><span class="p">(</span><span class="k">struct</span> <span class="n">device</span> <span class="o">*</span> <span class="n">dev</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">platform_driver</span> <span class="n">sysfs_driver</span><span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">driver</span> <span class="o">=</span> <span class="p">{.</span><span class="n">name</span> <span class="o">=</span> <span class="n">DRIVER_NAME</span><span class="p">,},</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="k">struct</span> <span class="n">platform_device</span> <span class="n">sysfs_device</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">name</span><span class="o">=</span> <span class="n">DRIVER_NAME</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">dev</span><span class="p">.</span><span class="n">release</span> <span class="o">=</span> <span class="n">sysfs_dev_release</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">skeleton_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="c1">//sysfs register driver+device and add devices attributes</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">platform_driver_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_driver</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">platform_device_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_mode</span><span class="p">);</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_duty</span><span class="p">);</span>
+        <span class="n">device_create_file</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sysfs_device</span><span class="p">.</span><span class="n">dev</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dev_attr_temp</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ....</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>For each attribute there is a read &amp; write function. Those are not detailed here, as they are prety straitforaward. They just made type convertion and value checking.</p>
+</div>
+<div class="section" id="thread">
+<h3>Thread<a class="headerlink" href="#thread" title="Permalink to this headline">¶</a></h3>
+<p>The thread is created from the module initialization fuction:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">skeleton_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="c1">// ...</span>
+    <span class="n">fan_ctrl_task</span> <span class="o">=</span> <span class="n">kthread_run</span><span class="p">(</span><span class="n">fan_ctrl_thread</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fan_ctrl_var</span><span class="p">,</span> <span class="s">&quot;fan-ctrl thread&quot;</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">fan_ctrl_task</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Unable to start fan-ctrl thread.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The thread initizaile the PWM output before entering the main loop:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">fan_ctrl_thread</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">temp_work</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">duty_ns</span><span class="p">;</span>
+
+    <span class="c1">// get the passed parameters</span>
+    <span class="k">struct</span> <span class="kt">fan_ctrl_t</span><span class="o">*</span> <span class="n">state</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="kt">fan_ctrl_t</span><span class="o">*</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
+
+    <span class="c1">// Enable PWM</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">pwm_enable</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">pwm</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Error enabling PWM output</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Initial seting of pwm</span>
+    <span class="n">duty_ns</span> <span class="o">=</span> <span class="p">(</span><span class="n">PERIOD_NS</span> <span class="o">*</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">pwm_config</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">pwm</span><span class="p">,</span> <span class="n">duty_ns</span><span class="p">,</span> <span class="n">PERIOD_NS</span><span class="p">);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Error setting PWM output</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">kthread_should_stop</span><span class="p">())</span>
+    <span class="p">{</span>
+        <span class="c1">// ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In the main loop makes tree tasks:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Read the CPU temperature</li>
+<li>Compute the required fan speed, if in auto mode</li>
+<li>Update PWM output</li>
+</ul>
+</div></blockquote>
+<p>When this sequence is done, it sleeps for half a second and then restarts.</p>
+<p>The CPU has many &#8220;Thermal zone&#8221;, we need to agredate the global CPU temerature simply by selecting the maxiumum temperature:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// get the maxiumum temperature of the CPU</span>
+<span class="n">state</span><span class="o">-&gt;</span><span class="n">temp</span> <span class="o">=</span> <span class="o">-</span><span class="mi">50000</span><span class="p">;</span>
+<span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">th_zones</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">thermal_zone_get_temp</span><span class="p">(</span><span class="n">thermal_zone_get_zone_by_name</span><span class="p">(</span><span class="n">th_zones</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="o">&amp;</span><span class="n">temp_work</span><span class="p">);</span>
+    <span class="n">state</span><span class="o">-&gt;</span><span class="n">temp</span> <span class="o">=</span> <span class="n">MAX</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">temp</span><span class="p">,</span> <span class="n">temp_work</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The management of the fan speed, for the <strong>auto</strong> mode is done as following:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// Do we are in auto mode ?</span>
+<span class="k">if</span><span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">mode</span><span class="p">,</span> <span class="n">MODE_AUTO</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Change the duty accoring the temperature</span>
+    <span class="k">if</span><span class="p">(</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">temp</span> <span class="o">&lt;</span> <span class="mi">57000</span> <span class="p">)</span>
+        <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">temp</span> <span class="o">&lt;</span> <span class="mi">63000</span> <span class="p">)</span>
+        <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">temp</span> <span class="o">&lt;</span> <span class="mi">68000</span> <span class="p">)</span>
+        <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span>
+    <span class="k">else</span>
+        <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The PWM duty-cycle is then update:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// Update PWM output</span>
+<span class="n">duty_ns</span> <span class="o">=</span> <span class="p">(</span><span class="n">PERIOD_NS</span> <span class="o">*</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">;</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pwm_config</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">pwm</span><span class="p">,</span> <span class="n">duty_ns</span><span class="p">,</span> <span class="n">PERIOD_NS</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Error setting PWM output</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Finaly, the threads sleep for a second.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// Sleep for half a second</span>
+<span class="n">msleep</span><span class="p">(</span><span class="mi">500</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="pwm-ouput">
+<h3>PWM ouput<a class="headerlink" href="#pwm-ouput" title="Permalink to this headline">¶</a></h3>
+<p>The PWM output drives the CPU&#8217;s fan speed. To use the PWM output, it first need to be requested from the module initialization function:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">static</span> <span class="kt">int</span> <span class="n">__init</span> <span class="nf">skeleton_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="n">fan_ctrl_var</span><span class="p">.</span><span class="n">pwm</span> <span class="o">=</span> <span class="n">pwm_request</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">DRIVER_NAME</span><span class="p">);</span>
+    <span class="c1">// ...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The rest of the PWM initilsation is done in the beginning of the thread code:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// Enable PWM</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pwm_enable</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">pwm</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Error enabling PWM output</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// Initial seting of pwm</span>
+<span class="n">duty_ns</span> <span class="o">=</span> <span class="p">(</span><span class="n">PERIOD_NS</span> <span class="o">*</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">duty</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">;</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pwm_config</span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">pwm</span><span class="p">,</span> <span class="n">duty_ns</span><span class="p">,</span> <span class="n">PERIOD_NS</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;Error setting PWM output</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>It should also be released when the module is unloaded:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">static</span> <span class="kt">void</span> <span class="n">__exit</span> <span class="nf">skeleton_exit</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">kthread_stop</span><span class="p">(</span><span class="n">fan_ctrl_task</span><span class="p">);</span>
+
+    <span class="n">pwm_free</span><span class="p">(</span><span class="n">fan_ctrl_var</span><span class="p">.</span><span class="n">pwm</span><span class="p">);</span>
+
+    <span class="c1">//...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="daemon">
+<span id="id1"></span><h2>Daemon<a class="headerlink" href="#daemon" title="Permalink to this headline">¶</a></h2>
+<p>Introduction
+This project is to realize a Daemon that communicate with the driver and the application. For the communication with the driver, the sysfs communication will be used and for the application, we decided to use an ip linux socket as IPC.</p>
+<p>Overview
+The program communicate with the driver, it can set the duty cycle (0 to 100) value and change the mode (auto or manual). The temperature can be read (RO) from the driver.</p>
+<p>The button on the board change the mode, and the fan speed. An application communicate through socket to interact with the daemon is implemented. All datas are passed to the driver through the daemon application, as shown in the following image.</p>
+<img alt="_images/block.png" src="_images/block.png" />
+<div class="section" id="board-interaction">
+<h3>Board interaction<a class="headerlink" href="#board-interaction" title="Permalink to this headline">¶</a></h3>
+<p>The user can user 3 switch on the extension board to change the mode and control the speed of the fan.</p>
+<blockquote>
+<div><ul class="simple">
+<li>The first button SW1 switch the mode between auto and manual.</li>
+<li>The second button SW2 increase 10% the fan speed on manual mode otherwise in auto mode do nothing</li>
+<li>The button SW3 does the same as SW2 but decrease 10% the speed fan.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="socket-interaction">
+<h3>Socket interaction<a class="headerlink" href="#socket-interaction" title="Permalink to this headline">¶</a></h3>
+<p>The fan speed can be change and set from a remote socket connected to this daemon. The protocol implemented is the following:</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">mode=[auto,manual]:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">to change the mode in the mode specified by a string end line terminated.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">duty=[0-100]:</th><td class="field-body">to change the duty cycle, can be a value from 0 to 100</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">show:</th><td class="field-body">to display the current settings in this format mode[],duty[],temp[]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">help:</th><td class="field-body">show this help</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="explication">
+<h3>Explication<a class="headerlink" href="#explication" title="Permalink to this headline">¶</a></h3>
+<p>The daemon program is divided in five parts as follow:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Initialize the daemon</li>
+<li>Initialize the communication with GPIO (LED,SWITCH), the driver, the server(port=8080), timer</li>
+<li>Set the default states (mode=auto, duty=50)</li>
+<li>Create EPOLL loop</li>
+<li>Start forever in the event loop</li>
+</ol>
+</div></blockquote>
+<p>All the following part are synchronized in the EPOLL loop.</p>
+</div>
+<div class="section" id="id2">
+<h3>Daemon<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>The initialize of the daemon the process is the following</p>
+<blockquote>
+<div><ul class="simple">
+<li>fork off the parent process</li>
+<li>create new session</li>
+<li>fork again to get rid of session leading process</li>
+<li>capture all required signals</li>
+<li>update file mode creation mask</li>
+<li>change working directory to appropriate place</li>
+<li>close all open file descriptors</li>
+<li>redirect stdin, stdout and stderr to /dev/null</li>
+<li>option: open syslog for message logging</li>
+<li>option: get effective user and group id for appropriate&#8217;s one</li>
+<li>option: change root directory</li>
+<li>option: change effective user and group id for appropriate&#8217;s one</li>
+<li>launch the body function</li>
+</ul>
+</div></blockquote>
+<p>The creation of the daemon is done in the main function then it calls the body function that run the program.</p>
+</div>
+<div class="section" id="gpio">
+<h3>GPIO<a class="headerlink" href="#gpio" title="Permalink to this headline">¶</a></h3>
+<p>The following function open a gpio in which direction is passed in parameter. Then for the led the direction should be in output and for the button in input:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">static</span> <span class="kt">int</span> <span class="n">open_gpio</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">pin</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">direction</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="driver">
+<h3>Driver<a class="headerlink" href="#driver" title="Permalink to this headline">¶</a></h3>
+<p>The communication with the driver is by SYFS, then the only things to do is to open the following filedescriptor in the program and the communication is bidirectional, thanks to the last parameter.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">fmode</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/sys/devices/platform/fan-ctrl/mode&quot;</span><span class="p">,</span><span class="n">O_RDWR</span><span class="p">);</span>
+<span class="kt">int</span> <span class="n">fduty</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/sys/devices/platform/fan-ctrl/duty&quot;</span><span class="p">,</span><span class="n">O_RDWR</span><span class="p">);</span>
+<span class="kt">int</span> <span class="n">ftemp</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/sys/devices/platform/fan-ctrl/temp&quot;</span><span class="p">,</span><span class="n">O_RDONLY</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="server">
+<h3>Server<a class="headerlink" href="#server" title="Permalink to this headline">¶</a></h3>
+<p>The server is listening on port 8080, by these two function the server listen and accept connection in a non-blocking state:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">make_socket_non_blocking</span> <span class="p">(</span><span class="kt">int</span> <span class="n">sfd</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">create_and_bind</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">port</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The following part of code create the server and make the server socket non-blocking. In this mode the program can continue to run even if no client is connected.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="n">sfd</span> <span class="o">=</span> <span class="n">create_and_bind</span> <span class="p">(</span><span class="s">&quot;8080&quot;</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">sfd</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">make_socket_non_blocking</span> <span class="p">(</span><span class="n">sfd</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">listen</span> <span class="p">(</span><span class="n">sfd</span><span class="p">,</span> <span class="n">SOMAXCONN</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">){</span>
+    <span class="n">perror</span> <span class="p">(</span><span class="s">&quot;listen&quot;</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="timer">
+<h3>Timer<a class="headerlink" href="#timer" title="Permalink to this headline">¶</a></h3>
+<p>The timer is started when a user button is pressed and cleared after a while. Then reset the led state. Its reset if the button is pressed while the downcount.</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="n">timfd</span> <span class="o">=</span> <span class="n">timerfd_create</span><span class="p">(</span><span class="n">CLOCK_MONOTONIC</span><span class="p">,</span> <span class="n">TFD_CLOEXEC</span><span class="p">);</span>
+
+<span class="n">its</span><span class="p">.</span><span class="n">it_value</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">its</span><span class="p">.</span><span class="n">it_value</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="o">=</span> <span class="mi">400000000</span><span class="p">;</span>
+<span class="n">its</span><span class="p">.</span><span class="n">it_interval</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">its</span><span class="p">.</span><span class="n">it_interval</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Each 400ms the leds are shutdown, when they light up.</p>
+</div>
+</div>
+<div class="section" id="application">
+<h2>Application<a class="headerlink" href="#application" title="Permalink to this headline">¶</a></h2>
+<p>The client application comunicate with the dameon using a TCP socket. It implement the user iterface to it in a simple comand line style. They are five commands:</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">help:</th><td class="field-body">Show this message &amp; exit</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">mode [auto|manual]:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Set the control mode</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">duty [0-100]:</th><td class="field-body">Set the duty-cycle</td>
+</tr>
+<tr class="field-even field"><th class="field-name">show:</th><td class="field-body">Show current temperature, duty and mode</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">exit:</th><td class="field-body">Exit this application</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>Here is a demo session:</p>
+<div class="highlight-python"><div class="highlight"><pre># /usr/workspace/fan-ctrl-client
+
+Fan controller remote-control
+=============================
+
+Commands are:
+
+ help                  : Show this message &amp; exit
+ mode [auto|manual]    : Set the control mode
+ duty [0-100]          : Set the duty-cycle
+ show                  : Show current temperature, duty and mode
+ exit                  : Exit this application
+
+&gt; show
+mode=[manual],duty=[20],temp=[41]
+&gt; duty 60
+Duty Cycle changed to 60
+&gt; show
+mode=[manual],duty=[60],temp=[41]
+&gt; duty 90
+Duty Cycle changed to 90
+&gt; show
+mode=[manual],duty=[90],temp=[41]
+&gt; mode auto
+auto
+&gt; show
+mode=[auto],duty=[90],temp=[41]
+&gt; exit
+Bye!
+#
+</pre></div>
+</div>
+<div class="section" id="deamon-communiction">
+<h3>Deamon communiction<a class="headerlink" href="#deamon-communiction" title="Permalink to this headline">¶</a></h3>
+<p>To open the communication with to the deamon, as socket is opened and the file descriptor associated is stored globaly (to be accessed by the other function). The daemon waits for connection on TCP port 8080. So we must connect the socket to the <strong>&#8220;localhost&#8221;</strong> to that port:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">static</span> <span class="kt">int</span> <span class="n">socket_fd</span><span class="p">;</span>
+
+<span class="c1">// ...</span>
+
+<span class="kt">int</span> <span class="nf">open_socket</span><span class="p">()</span>
+<span class="p">{</span>
+        <span class="c1">// Socket address</span>
+        <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">serv_addr</span><span class="p">;</span>
+        <span class="c1">// Host name</span>
+        <span class="k">struct</span> <span class="n">hostent</span> <span class="o">*</span><span class="n">server</span><span class="p">;</span>
+
+        <span class="c1">// Create a socket file descriptor</span>
+        <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sockfd</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="s">&quot;ERROR opening socket&quot;</span><span class="p">);</span>
+                <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// create a host object for host name (here an IP)</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="n">gethostbyname</span><span class="p">(</span><span class="s">&quot;localhost&quot;</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">server</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="s">&quot;ERROR, no such host</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+                <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// Copy server address and port to the socket address structure</span>
+        <span class="n">bzero</span><span class="p">((</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">serv_addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">serv_addr</span><span class="p">));</span>
+        <span class="n">serv_addr</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+        <span class="n">bcopy</span><span class="p">((</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">server</span><span class="o">-&gt;</span><span class="n">h_addr</span><span class="p">,</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">serv_addr</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">.</span><span class="n">s_addr</span><span class="p">,</span> <span class="n">server</span><span class="o">-&gt;</span><span class="n">h_length</span><span class="p">);</span>
+        <span class="n">serv_addr</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="mi">8080</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">connect</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,(</span><span class="k">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">serv_addr</span><span class="p">,</span><span class="k">sizeof</span><span class="p">(</span><span class="n">serv_addr</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+        <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="s">&quot;ERROR connecting</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">sockfd</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+        <span class="c1">// ... (variable declaration)</span>
+
+        <span class="n">socket_fd</span> <span class="o">=</span> <span class="n">open_socket</span><span class="p">();</span>
+
+        <span class="c1">// ... main loop</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The protocol handling it-self is done in the command hander described bellow. But in general, the protocol is text base as described in the <a class="reference internal" href="#daemon"><span>Daemon</span></a> section, and use <code class="docutils literal"><span class="pre">key=value\n</span></code> as general format. This very simple and testable.</p>
+</div>
+<div class="section" id="user-interface">
+<h3>User interface<a class="headerlink" href="#user-interface" title="Permalink to this headline">¶</a></h3>
+<p>The main loop parse the standard input (STDIN) for a command from the user:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+        <span class="kt">char</span> <span class="n">input_buffer</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+        <span class="kt">int</span> <span class="n">duty_work</span><span class="p">;</span>
+        <span class="kt">char</span> <span class="n">mode_work</span><span class="p">[</span><span class="mi">15</span><span class="p">];</span>
+
+        <span class="n">socket_fd</span> <span class="o">=</span> <span class="n">open_socket</span><span class="p">();</span>
+
+        <span class="n">print_help</span><span class="p">();</span>
+
+        <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="c1">// Display the prompt</span>
+                <span class="n">fputs</span><span class="p">(</span><span class="s">&quot;&gt; &quot;</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
+                <span class="c1">// Get user input</span>
+                <span class="n">fgets</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">),</span> <span class="n">stdin</span><span class="p">);</span>
+
+                <span class="c1">// Remove trailing new line</span>
+                <span class="n">input_buffer</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+
+                <span class="c1">// look for the command</span>
+                <span class="k">if</span><span class="p">(</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">,</span> <span class="s">&quot;exit&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="p">{</span>
+                        <span class="k">break</span><span class="p">;</span>
+                <span class="p">}</span>
+                <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">,</span> <span class="s">&quot;help&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="p">{</span>
+                        <span class="c1">// Print help text</span>
+                        <span class="n">print_help</span><span class="p">();</span>
+                <span class="p">}</span>
+                <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">strstr</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">,</span> <span class="s">&quot;mode&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+                <span class="p">{</span>
+                        <span class="c1">// ...</span>
+                <span class="p">}</span>
+                <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">strstr</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">,</span> <span class="s">&quot;duty&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+                <span class="p">{</span>
+                        <span class="c1">// ...</span>
+                <span class="p">}</span>
+                <span class="k">else</span> <span class="k">if</span><span class="p">(</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">input_buffer</span><span class="p">,</span> <span class="s">&quot;show&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="p">{</span>
+                        <span class="c1">// Do the show command</span>
+                        <span class="n">show</span><span class="p">();</span>
+                <span class="p">}</span>
+                <span class="k">else</span>
+                <span class="p">{</span>
+                        <span class="c1">// command was not understood.</span>
+                        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error: Unknown command! Type </span><span class="se">\&quot;</span><span class="s">help</span><span class="se">\&quot;</span><span class="s"> for help.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+                <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Bye!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <em>mode</em> and <em>duty</em> commands that are taking an argument are checking it before calling the command handler function.</p>
+<p>Here is the checking for the <em>mode</em> command that can take ether &#8220;auto&#8221; or &#8220;manual&#8221; arugment:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// Try to parse the mode argument</span>
+<span class="k">if</span><span class="p">(</span><span class="n">sscanf</span><span class="p">(</span><span class="n">input_buffer</span><span class="o">+</span><span class="mi">5</span><span class="p">,</span> <span class="s">&quot;%s&quot;</span><span class="p">,</span> <span class="n">mode_work</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="c1">// Parsing OK, check that the value is legal</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">mode_work</span><span class="p">,</span> <span class="s">&quot;auto&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span>  <span class="o">&amp;&amp;</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">mode_work</span><span class="p">,</span> <span class="s">&quot;manual&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error: Mode must be one of </span><span class="se">\&quot;</span><span class="s">auto</span><span class="se">\&quot;</span><span class="s"> or </span><span class="se">\&quot;</span><span class="s">manual</span><span class="se">\&quot;</span><span class="s">!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+                <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="c1">// All ok, set the mode</span>
+        <span class="n">set_mode</span><span class="p">(</span><span class="n">mode_work</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">else</span>
+<span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error: Unkown value for mode </span><span class="se">\&quot;</span><span class="s">%s</span><span class="se">\&quot;</span><span class="s">!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">input_buffer</span><span class="o">+</span><span class="mi">5</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Here is the checking for the <em>duty</em> command that can take an integer value between 0 and 100:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="c1">// try the parset the duty argument</span>
+<span class="k">if</span><span class="p">(</span> <span class="n">sscanf</span><span class="p">(</span><span class="n">input_buffer</span><span class="o">+</span><span class="mi">5</span><span class="p">,</span> <span class="s">&quot;%d&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">duty_work</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="c1">// check that the duty value is alowed</span>
+        <span class="k">if</span><span class="p">(</span> <span class="n">duty_work</span> <span class="o">&gt;</span> <span class="mi">100</span> <span class="o">||</span> <span class="n">duty_work</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+                <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error: Duty-cycle must be in range 0-100!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+                <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="c1">// Set the duty</span>
+        <span class="n">set_duty</span><span class="p">(</span><span class="n">duty_work</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">else</span>
+<span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error: Unkown value for duty </span><span class="se">\&quot;</span><span class="s">%s</span><span class="se">\&quot;</span><span class="s">!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">input_buffer</span><span class="o">+</span><span class="mi">5</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Each command, except <em>exit</em>, has an handler function. This is then handler function for the <em>duty</em> command:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="kt">void</span> <span class="nf">set_duty</span><span class="p">(</span><span class="kt">int</span> <span class="n">duty</span><span class="p">)</span>
+<span class="p">{</span>
+        <span class="kt">char</span> <span class="n">buffer</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+        <span class="c1">// set command text</span>
+        <span class="n">sprintf</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s">&quot;duty=%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">duty</span><span class="p">);</span>
+        <span class="c1">// Sent the command</span>
+        <span class="n">write</span><span class="p">(</span><span class="n">socket_fd</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buffer</span><span class="p">));</span>
+        <span class="c1">// Clear buffer for read</span>
+        <span class="n">bzero</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">64</span><span class="p">);</span>
+        <span class="c1">// Read answer</span>
+        <span class="n">read</span><span class="p">(</span><span class="n">socket_fd</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="mi">64</span><span class="p">);</span>
+        <span class="c1">// Display answer</span>
+        <span class="n">printf</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>All other command handler work similar.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="optimizations.html" class="btn btn-neutral" title="Optimizations" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Antoine Zen-Ruffinen, Yann Maret.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
