@@ -39,7 +39,7 @@ void set_duty(int duty)
 {
 	char buffer[64];
 	// set command text
-	sprintf(buffer, "dutyex=%d\n", duty);
+	sprintf(buffer, "duty=%d\n", duty);
 	// Sent the command
 	write(socket_fd, buffer, strlen(buffer));
 	// Clear buffer for read
@@ -106,8 +106,6 @@ int open_socket()
 	serv_addr.sin_family = AF_INET;
 	bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 	serv_addr.sin_port = htons(8080);
-
-
 
 	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
 	{
