@@ -234,10 +234,13 @@ static int __init skeleton_init(void)
         pr_err("Unable to start fan-ctrl thread.\n");
         return 1;
     }
+
     if (status == 0)
         pr_info ("fan-ctrl device driver loaded\n");
+    
     return status;
 }
+
 static void __exit skeleton_exit(void)
 {
     kthread_stop(fan_ctrl_task);
