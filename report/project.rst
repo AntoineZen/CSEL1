@@ -8,16 +8,16 @@ In this project we have the task to create a system made of 3 software:
  - A client that controls the daemon
 
 The kernel driver enable to read the CPU temperature and to drive the CPU's fan using PWM.
-It has also two mode. One is manual mode, where an user-land application can control the fan speed. In the seconde *"automatic"* mode, the kernel module drives the fan speed according the readen temperature.
+It has also two mode. One is manual mode, where an user-land application can control the fan speed. In the second *"automatic"* mode, the kernel module drives the fan speed according the redden temperature.
 
-The dameon application uses the interface provided by the kernel driver to manage it. In addition, the dameon appicion can be controller in two way: by an application that comunicate with it using IPC or directly by the hardware of the Odroid. The button and led can be used to change the mode and to set the fan speed in manual mode.
+The daemon application uses the interface provided by the kernel driver to manage it. In addition, the daemon application can be controller in two way: by an application that communicate with it using IPC or directly by the hardware of the Odroid. The button and led can be used to change the mode and to set the fan speed in manual mode.
 
-The client application can do exacly the same task that the button but can also read the system status.
+The client application can do exactly the same task that the button but can also read the system status.
 
 Kernel Driver
 -------------
 
-The kernel driver uses sysfs as a interface as it is easyer to read & write some simple parameter as we will have in this application. We are not making heavy data-exchange that whould requires a stream or memory interface. 
+The kernel driver uses *sysfs* as a interface as it is easier to read & write some simple parameter as we will have in this application. We are not making heavy data-exchange that would requires a stream or memory interface. 
 
 It will run a thread to handle the temperature read-out and to implement the automatic mode.
 It will also drives the PWM.
@@ -26,9 +26,9 @@ The driver will expose 3 variables to the user application:
 
 	:duty: Current duty cycle (read/write, read only in auto mode)
 	:mode: Current working mode, auto or manual
-	:temp: Current CPU termperature.
+	:temp: Current CPU temperature.
 
-The kerenel module will uses the following data structre to handle its internal state:
+The kernel module will uses the following data structure to handle its internal state:
 
 .. code-block:: c
 
@@ -45,10 +45,10 @@ The kerenel module will uses the following data structre to handle its internal 
 	};
 
 
-Sysfs inteface
-^^^^^^^^^^^^^^
+Sysfs interface
+^^^^^^^^^^^^^^^
 
-The driver paramters will be materialized in the sysfs structure by the following files:
+The driver parameters will be materialized in the *sysfs* structure by the following files:
 
  - duty: ``/sys/devices/platform/fan-ctrl/duty``
  - mode: ``/sys/devices/platform/fan-ctrl/mode``
@@ -99,12 +99,12 @@ And then in the module initialization function, a sysfs driver is declared and t
 
 	}
 
-For each attribute there is a read & write function. Those are not detailed here, as they are prety straitforaward. They just made type convertion and value checking.
+For each attribute there is a read & write function. Those are not detailed here, as they are pretty straightforward. They just made type conversion and value checking.
 
 Thread
 ^^^^^^
 
-The thread is created from the module initialization fuction:
+The thread is created from the module initialization function:
 
 .. code-block:: c
 
@@ -121,7 +121,7 @@ The thread is created from the module initialization fuction:
 	    // ...
 	}
 
-The thread initizaile the PWM output before entering the main loop:
+The thread initialize the PWM output before entering the main loop:
 
 .. code-block:: c
 
@@ -165,11 +165,11 @@ In the main loop makes tree tasks:
 
 When this sequence is done, it sleeps for half a second and then restarts.
 
-The CPU has many "Thermal zone", we need to agredate the global CPU temerature simply by selecting the maxiumum temperature:
+The CPU has many "Thermal zone", we need to aggregated the global CPU temperature simply by selecting the maximum temperature:
 
 .. code-block:: c
 
-    // get the maxiumum temperature of the CPU
+    // get the maximum temperature of the CPU
     state->temp = -50000;
     for(i = 0; i< sizeof(th_zones); i++)
     {
@@ -210,15 +210,15 @@ The PWM duty-cycle is then update:
     }
 
 
-Finaly, the threads sleep for a second.
+Finally, the threads sleep for a second.
 
 .. code-block:: c
 
     // Sleep for half a second
     msleep(500);
 
-PWM ouput
-^^^^^^^^^
+PWM output
+^^^^^^^^^^
 
 The PWM output drives the CPU's fan speed. To use the PWM output, it first need to be requested from the module initialization function:
 
@@ -232,7 +232,7 @@ The PWM output drives the CPU's fan speed. To use the PWM output, it first need 
 	}
 
 
-The rest of the PWM initilsation is done in the beginning of the thread code:
+The rest of the PWM initialization is done in the beginning of the thread code:
 
 .. code-block:: c
 
@@ -243,7 +243,7 @@ The rest of the PWM initilsation is done in the beginning of the thread code:
         pr_err("Error enabling PWM output\n");
     }
 
-    // Initial seting of pwm
+    // Initial setting of pwm
     duty_ns = (PERIOD_NS * state->duty) / 100;
     ret = pwm_config(state->pwm, duty_ns, PERIOD_NS);
     if(ret)
@@ -272,7 +272,7 @@ Daemon
 ------
 
 Introduction
-This project is to realize a Daemon that communicate with the driver and the application. For the communication with the driver, the sysfs communication will be used and for the application, we decided to use an ip linux socket as IPC.
+This project is to realize a Daemon that communicate with the driver and the application. For the communication with the driver, the *sysfs* communication will be used and for the application, we decided to use an IP linux *socket* as IPC.
 
 
 Overview
@@ -410,7 +410,7 @@ Each 400ms the leds are shutdown, when they light up.
 Application
 -----------
 
-The client application comunicate with the dameon using a TCP socket. It implement the user iterface to it in a simple comand line style. They are five commands:
+The client application communicate with the daemon using a TCP socket. It implement the user interface to it in a simple command line style. They are five commands:
 
  :help: Show this message & exit
  :mode [auto|manual]: Set the control mode
@@ -453,10 +453,10 @@ Here is a demo session::
 	Bye!
 	# 
 
-Deamon communiction
-^^^^^^^^^^^^^^^^^^^
+Daemon communication
+^^^^^^^^^^^^^^^^^^^^
 
-To open the communication with to the deamon, as socket is opened and the file descriptor associated is stored globaly (to be accessed by the other function). The daemon waits for connection on TCP port 8080. So we must connect the socket to the **"localhost"** to that port:
+To open the communication with to the daemon, as socket is opened and the file descriptor associated is stored globally (to be accessed by the other function). The daemon waits for connection on TCP port 8080. So we must connect the socket to the **"localhost"** to that port:
 
 .. code-block:: c
 
@@ -577,7 +577,7 @@ The main loop parse the standard input (STDIN) for a command from the user:
 
 The *mode* and *duty* commands that are taking an argument are checking it before calling the command handler function.
 
-Here is the checking for the *mode* command that can take ether "auto" or "manual" arugment:
+Here is the checking for the *mode* command that can take ether "auto" or "manual" argument:
 
 .. code-block:: c
 
